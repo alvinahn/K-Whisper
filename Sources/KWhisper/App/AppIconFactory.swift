@@ -131,4 +131,87 @@ enum AppIconFactory {
         img.isTemplate = true
         return img
     }
+
+    /// Renders the DMG installer window background (540×380) with the brand gradient,
+    /// title text, and a horizontal arrow between the icon positions used by `make-dmg.sh`.
+    /// Writes a PNG to `url`.
+    static func writeDMGBackground(to url: URL) throws {
+        let size = NSSize(width: 540, height: 380)
+        let img = NSImage(size: size, flipped: false) { rect in
+            // Soft dark gradient background
+            let bg = NSGradient(colors: [
+                NSColor(srgbRed: 0.10, green: 0.10, blue: 0.13, alpha: 1),
+                NSColor(srgbRed: 0.18, green: 0.16, blue: 0.22, alpha: 1)
+            ])!
+            bg.draw(in: rect, angle: 90)
+
+            // Subtle accent stripe across the top
+            let accent = NSGradient(colors: [voxaIndigo.withAlphaComponent(0.0), voxaIndigo.withAlphaComponent(0.35), voxaIndigo.withAlphaComponent(0.0)])!
+            accent.draw(in: NSRect(x: 0, y: rect.height - 4, width: rect.width, height: 4), angle: 0)
+
+            // Title
+            let titleStyle = NSMutableParagraphStyle()
+            titleStyle.alignment = .center
+            let titleAttrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 19, weight: .semibold),
+                .foregroundColor: NSColor.white,
+                .paragraphStyle: titleStyle
+            ]
+            let title = "Install K-Whisper" as NSString
+            let titleSize = title.size(withAttributes: titleAttrs)
+            title.draw(
+                at: NSPoint(x: (rect.width - titleSize.width) / 2, y: rect.height - 56),
+                withAttributes: titleAttrs
+            )
+
+            // Subtitle
+            let subAttrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 12, weight: .regular),
+                .foregroundColor: NSColor.white.withAlphaComponent(0.7)
+            ]
+            let subtitle = "Drag the icon onto the Applications folder" as NSString
+            let subSize = subtitle.size(withAttributes: subAttrs)
+            subtitle.draw(
+                at: NSPoint(x: (rect.width - subSize.width) / 2, y: rect.height - 80),
+                withAttributes: subAttrs
+            )
+
+            // Arrow between icon positions.
+            // AppleScript places K-Whisper at {140, 200} and Applications at {400, 200}
+            // (center, measured from top-left). In our PNG (origin bottom-left, 380 tall),
+            // that's y = 380 - 200 = 180. Arrow at icon vertical center.
+            let arrowY: CGFloat = 200
+            let startX: CGFloat = 200
+            let endX: CGFloat   = 340
+            let stroke = NSColor.white.withAlphaComponent(0.55)
+            stroke.setStroke()
+
+            let line = NSBezierPath()
+            line.lineWidth = 3.0
+            line.lineCapStyle = .round
+            line.move(to: NSPoint(x: startX, y: arrowY))
+            line.line(to: NSPoint(x: endX - 4, y: arrowY))
+            line.stroke()
+
+            // Arrowhead — filled triangle at the end
+            let head = NSBezierPath()
+            head.move(to: NSPoint(x: endX + 8, y: arrowY))
+            head.line(to: NSPoint(x: endX - 6, y: arrowY + 8))
+            head.line(to: NSPoint(x: endX - 6, y: arrowY - 8))
+            head.close()
+            stroke.setFill()
+            head.fill()
+
+            return true
+        }
+
+        guard let tiff = img.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff),
+              let png = rep.representation(using: .png, properties: [:]) else {
+            throw NSError(domain: "AppIconFactory", code: 2, userInfo: [
+                NSLocalizedDescriptionKey: "DMG background render failed"
+            ])
+        }
+        try png.write(to: url)
+    }
 }

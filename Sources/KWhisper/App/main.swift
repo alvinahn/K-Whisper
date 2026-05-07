@@ -17,6 +17,22 @@ if args.count >= 3, args[1] == "--render-iconset" {
     }
 }
 
+// Build-time helper: render DMG installer window background.
+// Usage: ./K-Whisper --render-dmg-background /path/to/background.png
+if args.count >= 3, args[1] == "--render-dmg-background" {
+    let url = URL(fileURLWithPath: args[2])
+    do {
+        try MainActor.assumeIsolated {
+            try AppIconFactory.writeDMGBackground(to: url)
+        }
+        print("Wrote DMG background to \(url.path)")
+        exit(0)
+    } catch {
+        FileHandle.standardError.write("Failed: \(error.localizedDescription)\n".data(using: .utf8)!)
+        exit(1)
+    }
+}
+
 // Top-level code is nonisolated; AppDelegate's @MainActor init must be entered explicitly.
 // macOS guarantees the main thread for the main entry point, so assumeIsolated is safe.
 MainActor.assumeIsolated {
