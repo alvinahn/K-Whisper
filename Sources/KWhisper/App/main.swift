@@ -33,6 +33,24 @@ if args.count >= 3, args[1] == "--render-dmg-background" {
     }
 }
 
+// Build-time helper: copy the system icon of one file/folder onto another.
+// Used by make-dmg.sh to give the Applications alias the real folder icon.
+// Usage: ./K-Whisper --copy-icon /Applications /Volumes/K-Whisper/Applications
+if args.count >= 4, args[1] == "--copy-icon" {
+    let src = args[2]
+    let dst = args[3]
+    MainActor.assumeIsolated {
+        let icon = NSWorkspace.shared.icon(forFile: src)
+        let ok = NSWorkspace.shared.setIcon(icon, forFile: dst, options: [])
+        if ok {
+            print("Copied icon from \(src) → \(dst)")
+        } else {
+            FileHandle.standardError.write("setIcon returned false for \(dst)\n".data(using: .utf8)!)
+        }
+    }
+    exit(0)
+}
+
 // Top-level code is nonisolated; AppDelegate's @MainActor init must be entered explicitly.
 // macOS guarantees the main thread for the main entry point, so assumeIsolated is safe.
 MainActor.assumeIsolated {

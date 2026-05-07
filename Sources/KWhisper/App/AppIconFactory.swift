@@ -207,6 +207,35 @@ enum AppIconFactory {
             stroke.setFill()
             head.fill()
 
+            // Draw the icon labels in BRIGHT WHITE in the background. Finder's own
+            // overlay labels render as a translucent gray on dark DMG backgrounds, so
+            // we paint solid white text exactly at the label positions and let Finder's
+            // dim overlay sit on top — composite reads as proper white labels.
+            let labelStyle = NSMutableParagraphStyle()
+            labelStyle.alignment = .center
+            let labelAttrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 12, weight: .semibold),
+                .foregroundColor: NSColor.white,
+                .paragraphStyle: labelStyle,
+                .shadow: titleShadow
+            ]
+            // Icon center is at AppleScript {x, 200} = PNG y = 380 - 200 = 180.
+            // Icon is 96 px tall, so its bottom edge is at PNG y = 132. Label sits
+            // ~12 px below the icon; baseline around y = 110.
+            let labelY: CGFloat = 110
+            let leftLabel = "K-Whisper" as NSString
+            let leftSize = leftLabel.size(withAttributes: labelAttrs)
+            leftLabel.draw(
+                at: NSPoint(x: 140 - leftSize.width / 2, y: labelY),
+                withAttributes: labelAttrs
+            )
+            let rightLabel = "Applications" as NSString
+            let rightSize = rightLabel.size(withAttributes: labelAttrs)
+            rightLabel.draw(
+                at: NSPoint(x: 400 - rightSize.width / 2, y: labelY),
+                withAttributes: labelAttrs
+            )
+
             return true
         }
 

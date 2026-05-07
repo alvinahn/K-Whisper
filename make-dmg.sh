@@ -80,6 +80,13 @@ MAKE_ALIAS
 
 sleep 0.5
 
+# Force-attach the system Applications folder icon onto the alias. Without this,
+# the alias often shows up as an empty rounded box because Finder doesn't always
+# resolve and cache the target's icon resource on first render.
+echo "▶︎ Copying system Applications icon"
+"$EXECUTABLE" --copy-icon "/Applications" "$MOUNT_POINT/Applications" || true
+sleep 0.3
+
 # 6. AppleScript: window size, icon view, bg image, icon positions
 osascript <<APPLESCRIPT
 on run
