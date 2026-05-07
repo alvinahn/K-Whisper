@@ -136,51 +136,8 @@ enum AppIconFactory {
     /// title text, and a horizontal arrow between the icon positions used by `make-dmg.sh`.
     /// Writes a PNG to `url`.
     static func writeDMGBackground(to url: URL) throws {
-        // Render at 2× the logical size so the PNG stays crisp on Retina displays.
-        // (Finder scales a 540×380 background to fit the 540×380 logical window;
-        // on Retina that's 1080×760 physical pixels, so a 1× PNG looks blurry.)
-        let logicalSize = NSSize(width: 540, height: 380)
-        let pixelScale: CGFloat = 2
-        let pixelSize = NSSize(
-            width: logicalSize.width * pixelScale,
-            height: logicalSize.height * pixelScale
-        )
-
-        guard let rep = NSBitmapImageRep(
-            bitmapDataPlanes: nil,
-            pixelsWide: Int(pixelSize.width),
-            pixelsHigh: Int(pixelSize.height),
-            bitsPerSample: 8,
-            samplesPerPixel: 4,
-            hasAlpha: true,
-            isPlanar: false,
-            colorSpaceName: .deviceRGB,
-            bytesPerRow: 0,
-            bitsPerPixel: 32
-        ) else {
-            throw NSError(domain: "AppIconFactory", code: 2, userInfo: [
-                NSLocalizedDescriptionKey: "Couldn't allocate 2× bitmap"
-            ])
-        }
-        rep.size = logicalSize
-
-        guard let context = NSGraphicsContext(bitmapImageRep: rep) else {
-            throw NSError(domain: "AppIconFactory", code: 3, userInfo: [
-                NSLocalizedDescriptionKey: "Couldn't make graphics context"
-            ])
-        }
-
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = context
-        context.imageInterpolation = .high
-        context.shouldAntialias = true
-        context.cgContext.setShouldSmoothFonts(true)
-        context.cgContext.setShouldAntialias(true)
-        context.cgContext.scaleBy(x: pixelScale, y: pixelScale)
-
-        // All drawing below uses the logical 540×380 coordinate space.
-        do {
-            let rect = NSRect(origin: .zero, size: logicalSize)
+        let size = NSSize(width: 540, height: 380)
+        let img = NSImage(size: size, flipped: false) { rect in
             // Darker gradient so white text + white arrow have stronger contrast.
             let bg = NSGradient(colors: [
                 NSColor(srgbRed: 0.06, green: 0.06, blue: 0.10, alpha: 1),
@@ -278,13 +235,15 @@ enum AppIconFactory {
                 at: NSPoint(x: 400 - rightSize.width / 2, y: labelY),
                 withAttributes: labelAttrs
             )
+
+            return true
         }
 
-        NSGraphicsContext.restoreGraphicsState()
-
-        guard let png = rep.representation(using: .png, properties: [:]) else {
-            throw NSError(domain: "AppIconFactory", code: 4, userInfo: [
-                NSLocalizedDescriptionKey: "PNG encoding failed"
+        guard let tiff = img.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff),
+              let png = rep.representation(using: .png, properties: [:]) else {
+            throw NSError(domain: "AppIconFactory", code: 2, userInfo: [
+                NSLocalizedDescriptionKey: "DMG background render failed"
             ])
         }
         try png.write(to: url)
