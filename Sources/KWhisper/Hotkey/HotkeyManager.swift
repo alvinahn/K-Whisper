@@ -33,10 +33,16 @@ final class HotkeyManager: ObservableObject {
         }
 
         // Live-reload when the user changes any hotkey-related setting.
-        settings.$holdKey.dropFirst().sink { [weak self] _ in self?.reload() }.store(in: &settingsSubs)
-        settings.$holdKeyEnabled.dropFirst().sink { [weak self] _ in self?.reload() }.store(in: &settingsSubs)
-        settings.$toggleHotkeyKeyCode.dropFirst().sink { [weak self] _ in self?.reload() }.store(in: &settingsSubs)
-        settings.$toggleHotkeyModifiers.dropFirst().sink { [weak self] _ in self?.reload() }.store(in: &settingsSubs)
+        // @Published fires in willSet, so when our sink runs the underlying property
+        // (e.g. settings.holdKey) is still the OLD value. Defer to the next runloop
+        // tick so reload() reads the freshly-committed value from Settings.
+        let deferReload: () -> Void = { [weak self] in
+            DispatchQueue.main.async { self?.reload() }
+        }
+        settings.$holdKey.dropFirst().sink { _ in deferReload() }.store(in: &settingsSubs)
+        settings.$holdKeyEnabled.dropFirst().sink { _ in deferReload() }.store(in: &settingsSubs)
+        settings.$toggleHotkeyKeyCode.dropFirst().sink { _ in deferReload() }.store(in: &settingsSubs)
+        settings.$toggleHotkeyModifiers.dropFirst().sink { _ in deferReload() }.store(in: &settingsSubs)
     }
 
     func reload() {

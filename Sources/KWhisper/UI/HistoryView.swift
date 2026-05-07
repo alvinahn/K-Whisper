@@ -30,10 +30,10 @@ struct HistoryView: View {
                 Button(role: .destructive) { store.clear() } label: { Text("Clear all") }
                     .disabled(store.entries.isEmpty)
             }
-            .padding(.bottom, 8)
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 10)
 
-            // Use HStack (not HSplitView) so the left list keeps a stable width
-            // when the right detail pane appears/disappears on selection.
             HStack(spacing: 0) {
                 List(selection: $selection) {
                     ForEach(filtered) { entry in
@@ -52,18 +52,21 @@ struct HistoryView: View {
                         .tag(entry.id as HistoryEntry.ID?)
                     }
                 }
-                .frame(width: 360)
+                .listStyle(.inset)
+                .frame(width: 280)
 
                 Divider()
 
-                if let sel = selection, let entry = store.entries.first(where: { $0.id == sel }) {
-                    detail(entry)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    Text("Select an entry")
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Group {
+                    if let sel = selection, let entry = store.entries.first(where: { $0.id == sel }) {
+                        detail(entry)
+                    } else {
+                        Text("Select an entry")
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
@@ -71,26 +74,34 @@ struct HistoryView: View {
     @ViewBuilder
     private func detail(_ entry: HistoryEntry) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
                 Text(entry.timestamp.formatted(date: .abbreviated, time: .standard))
                     .font(.caption).foregroundStyle(.secondary)
 
                 GroupBox("Output (\(entry.modeName))") {
                     HStack(alignment: .top) {
-                        Text(entry.processedText).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+                        Text(entry.processedText)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         Button {
                             NSPasteboard.general.clearContents()
                             NSPasteboard.general.setString(entry.processedText, forType: .string)
                         } label: { Image(systemName: "doc.on.doc") }
                             .buttonStyle(.plain)
-                    }.padding(8)
+                    }
+                    .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 GroupBox("Raw transcript") {
-                    Text(entry.rawTranscript).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(8)
+                    Text(entry.rawTranscript)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(8)
                 }
             }
-            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
         }
     }
 }

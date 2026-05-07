@@ -21,14 +21,23 @@ struct PermissionsView: View {
                 fallback: { perms.openMicrophonePane() }
             )
 
-            row(
-                title: "Accessibility",
-                granted: perms.hasAccessibility,
-                why: "Required to type the transcribed text into other apps.",
-                action: { perms.requestAccessibility() },
-                actionLabel: "Request",
-                fallback: { perms.openAccessibilityPane() }
-            )
+            Section("Accessibility") {
+                HStack {
+                    Image(systemName: perms.hasAccessibility ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundStyle(perms.hasAccessibility ? .green : .red)
+                    Text(perms.hasAccessibility ? "Granted" : "Not granted")
+                    Spacer()
+                    Button("Reset & re-grant") { perms.resetAccessibility() }
+                        .help("Wipes the existing TCC entry (which gets stale across rebuilds) and re-prompts macOS to add this build's K-Whisper.app fresh.")
+                    Button("Open System Settings") { perms.openAccessibilityPane() }
+                }
+                Text("Required to type the transcribed text into other apps.")
+                    .font(.caption).foregroundStyle(.secondary)
+                if !perms.hasAccessibility {
+                    Text("After clicking **Reset & re-grant**: System Settings will open. Toggle K-Whisper on in the Accessibility list. The previous (stale) entry has been removed automatically — no need to click − or +.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
 
             if settings.holdKeyEnabled && settings.holdKey == .fn {
                 row(
@@ -75,7 +84,7 @@ struct PermissionsView: View {
                         .font(.system(.body, design: .monospaced))
                         .padding(.top, 6)
                 }
-                Text("If paste fails: re-grant Accessibility in System Settings (after unsigned rebuilds, the existing grant becomes stale).")
+                Text("If paste fails after a rebuild, click **Reset & re-grant** in the Accessibility section above — it runs `tccutil reset Accessibility app.kwhisper` and re-prompts so the new code-signature is registered cleanly.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }

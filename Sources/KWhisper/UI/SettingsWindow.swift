@@ -20,12 +20,15 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         }
         let hosting = NSHostingController(rootView: SettingsRootView())
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 820, height: 560),
+            contentRect: NSRect(x: 0, y: 0, width: 880, height: 580),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         window.title = "K-Whisper Settings"
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.toolbarStyle = .unified
         window.contentViewController = hosting
         window.center()
         window.isReleasedWhenClosed = false
@@ -83,14 +86,16 @@ private enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
+    /// Slightly desaturated tints, closer to the native macOS Settings sidebar feel
+    /// than the stock Color.yellow / Color.blue (which read as neon).
     var iconTint: Color {
         switch self {
-        case .general:     return .gray
-        case .apiKeys:     return .yellow
-        case .modes:       return .blue
-        case .glossary:    return .purple
-        case .history:     return .indigo
-        case .permissions: return .green
+        case .general:     return Color(red: 0.50, green: 0.50, blue: 0.55)
+        case .apiKeys:     return Color(red: 0.86, green: 0.66, blue: 0.18)
+        case .modes:       return Color(red: 0.20, green: 0.50, blue: 0.92)
+        case .glossary:    return Color(red: 0.62, green: 0.42, blue: 0.85)
+        case .history:     return Color(red: 0.42, green: 0.40, blue: 0.85)
+        case .permissions: return Color(red: 0.30, green: 0.65, blue: 0.40)
         }
     }
 }
@@ -101,20 +106,26 @@ struct SettingsRootView: View {
     var body: some View {
         NavigationSplitView {
             List(SettingsTab.allCases, selection: $selection) { tab in
-                NavigationLink(value: tab) {
-                    Label {
-                        Text(tab.title)
-                            .font(.system(size: 13, weight: .medium))
-                    } icon: {
-                        Image(systemName: tab.systemImage)
-                            .foregroundStyle(.white)
-                            .frame(width: 22, height: 22)
-                            .background(
-                                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                    .fill(tab.iconTint)
-                            )
-                    }
+                Label {
+                    Text(tab.title)
+                        .font(.system(size: 13, weight: .medium))
+                } icon: {
+                    Image(systemName: tab.systemImage)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.96))
+                        .frame(width: 20, height: 20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [tab.iconTint, tab.iconTint.opacity(0.82)],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                        )
                 }
+                .tag(tab)
             }
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
@@ -122,8 +133,13 @@ struct SettingsRootView: View {
             detailView
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .navigationTitle(selection?.title ?? "Settings")
+                .navigationSubtitle("")
+                .toolbar {
+                    ToolbarItem(placement: .navigation) { Spacer() }
+                }
         }
-        .frame(minWidth: 820, minHeight: 560)
+        .frame(minWidth: 880, minHeight: 580)
+        .toolbarBackground(.visible, for: .windowToolbar)
     }
 
     @ViewBuilder

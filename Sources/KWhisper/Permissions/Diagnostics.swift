@@ -84,9 +84,14 @@ final class Diagnostics: ObservableObject {
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
             guard let self else { return }
-            TextInjector.deliver("voxa-paste-test ✓")
-            self.lastMessage = "✅ Sent paste — did 'voxa-paste-test ✓' appear in your text field?"
-            self.lastSuccess = true
+            do {
+                try TextInjector.deliver("kwhisper-paste-test ✓")
+                self.lastMessage = "✅ Sent paste — did 'kwhisper-paste-test ✓' appear in your text field?"
+                self.lastSuccess = true
+            } catch {
+                self.lastMessage = "❌ \(error.localizedDescription) — click 'Reset & re-grant' on the Accessibility row above."
+                self.lastSuccess = false
+            }
         }
     }
 

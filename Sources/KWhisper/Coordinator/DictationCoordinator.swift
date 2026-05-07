@@ -87,6 +87,17 @@ final class DictationCoordinator: ObservableObject {
         }
     }
 
+    /// Returns a non-HTTP, app-specific actionable hint for known error types.
+    private static func customHint(for error: Error) -> String? {
+        if let e = error as? TextInjector.DeliveryError {
+            switch e {
+            case .accessibilityNotGranted:
+                return "Settings → Permissions → Reset Accessibility"
+            }
+        }
+        return nil
+    }
+
     /// Pulls the HTTP status code out of any of our provider error types so we can
     /// surface a contextual hint in the HUD.
     private static func extractHTTPStatus(from error: Error) -> Int? {
@@ -253,9 +264,17 @@ final class DictationCoordinator: ObservableObject {
             return
         }
 
-        // Step 3: deliver.
+        // Step 3: deliver. If Accessibility isn't granted the keystrokes are silently
+        // swallowed — we MUST surface that as an error rather than show a fake "✓ Inserted".
         Log.inject.info("→ Delivering \(final.count) chars via \(self.settings.outputMethod.rawValue)")
-        TextInjector.deliver(final)
+        do {
+            try TextInjector.deliver(final)
+        } catch {
+            Log.inject.error("Delivery failed: \(error.localizedDescription)")
+            showError(error)
+            state = .idle
+            return
+        }
 
         // Step 4: history + brief success indicator.
         history.add(HistoryEntry(
@@ -281,7 +300,8 @@ final class DictationCoordinator: ObservableObject {
     private func showError(_ error: Error) {
         Log.app.error("✗ \(error.localizedDescription)")
         let status = Self.extractHTTPStatus(from: error)
-        let hint = status.flatMap { APIErrorParser.hint(status: $0) }
+        let hint = Self.customHint(for: error)
+            ?? status.flatMap { APIErrorParser.hint(status: $0) }
             ?? "See Console.app · filter app.kwhisper"
         hud.model.phase = .error(message: error.localizedDescription, hint: hint)
         hud.show()

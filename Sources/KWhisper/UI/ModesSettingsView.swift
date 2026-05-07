@@ -6,12 +6,15 @@ struct ModesSettingsView: View {
     @State private var draft: Mode?
 
     var body: some View {
-        HSplitView {
+        // Plain HStack instead of HSplitView so it composes cleanly inside the
+        // outer NavigationSplitView (HSplitView confuses the navigation column model).
+        HStack(spacing: 0) {
             VStack(spacing: 0) {
                 List(selection: $selectedId) {
                     ForEach(manager.modes) { mode in
-                        HStack {
+                        HStack(spacing: 6) {
                             Text(mode.name)
+                                .lineLimit(1)
                             if mode.isBuiltIn {
                                 Text("built-in")
                                     .font(.caption2)
@@ -20,12 +23,11 @@ struct ModesSettingsView: View {
                                     .clipShape(Capsule())
                             }
                             Spacer()
-                            Text(mode.provider.displayName)
-                                .font(.caption).foregroundStyle(.secondary)
                         }
                         .tag(mode.id as String?)
                     }
                 }
+                .listStyle(.inset)
 
                 Divider()
 
@@ -42,20 +44,28 @@ struct ModesSettingsView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
             }
-            .frame(minWidth: 220)
+            .frame(width: 220)
 
-            if let draft = draft {
-                ModeEditor(mode: draft) { updated in
-                    manager.upsert(updated)
-                    self.draft = updated
+            Divider()
+
+            Group {
+                if let draft = draft {
+                    ModeEditor(mode: draft) { updated in
+                        manager.upsert(updated)
+                        self.draft = updated
+                    }
+                    // Force a fresh editor instance per mode so its internal @State
+                    // (the editable Mode copy) re-initializes from the new selection.
+                    // Without this, SwiftUI reuses the old @State and the form looks
+                    // frozen on the previously selected mode.
+                    .id(draft.id)
+                } else {
+                    Text("Select a mode to edit, or click + to create a new one.")
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .padding(12)
-                .frame(minWidth: 380)
-            } else {
-                Text("Select a mode to edit, or click + to create a new one.")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .onChange(of: selectedId) { _, id in
             draft = id.flatMap { manager.mode(id: $0) }

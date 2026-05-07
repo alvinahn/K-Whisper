@@ -1,9 +1,21 @@
 import Foundation
 import AppKit
 import Carbon.HIToolbox
+import ApplicationServices
 
 @MainActor
 enum TextInjector {
+
+    enum DeliveryError: Error, LocalizedError {
+        case accessibilityNotGranted
+        var errorDescription: String? {
+            switch self {
+            case .accessibilityNotGranted:
+                return "Accessibility permission missing — paste can't reach the focused app"
+            }
+        }
+    }
+
     /// Pastes text at the current cursor by:
     ///   1) saving current pasteboard (string only),
     ///   2) writing `text`,
@@ -61,8 +73,14 @@ enum TextInjector {
     }
 
     /// Routes through the user-selected output method.
-    static func deliver(_ text: String) {
+    /// Throws if Accessibility permission is missing — without it, the synthesized
+    /// keystrokes/paste are silently swallowed by macOS, and the user sees a fake-success HUD.
+    static func deliver(_ text: String) throws {
         guard !text.isEmpty else { return }
+        guard AXIsProcessTrusted() else {
+            Log.inject.error("AXIsProcessTrusted is false — paste cannot reach the focused app")
+            throw DeliveryError.accessibilityNotGranted
+        }
         switch Settings.shared.outputMethod {
         case .clipboardPaste:
             paste(text)

@@ -5,7 +5,7 @@ struct GlossaryView: View {
     @State private var newTerm: String = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             Text("Add proper nouns, names, brand terms, and technical jargon. They get injected into Whisper's bias prompt and into post-processing prompts to preserve correct spelling.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -14,7 +14,8 @@ struct GlossaryView: View {
                 TextField("e.g. BoundX, Junho, Navio", text: $newTerm)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit { add() }
-                Button("Add", action: add).disabled(newTerm.trimmingCharacters(in: .whitespaces).isEmpty)
+                Button("Add", action: add)
+                    .disabled(newTerm.trimmingCharacters(in: .whitespaces).isEmpty)
             }
 
             List {
@@ -31,9 +32,10 @@ struct GlossaryView: View {
                     }
                 }
             }
-            .frame(minHeight: 280)
+            .listStyle(.inset(alternatesRowBackgrounds: true))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding(.horizontal, 4)
+        .padding(20)
     }
 
     private func add() {

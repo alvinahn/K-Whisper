@@ -96,7 +96,13 @@ final class Settings: ObservableObject {
         if migrationVersion < 1 {
             // v1: switch start/stop sounds OFF by default for everyone.
             d.set(false, forKey: "playSounds")
-            d.set(1, forKey: "settingsMigrationVersion")
+        }
+        if migrationVersion < 2 {
+            // v2: default hold key → right Option (Superwhisper-style).
+            d.set(HoldKey.rightOption.rawValue, forKey: "holdKey")
+        }
+        if migrationVersion < 2 {
+            d.set(2, forKey: "settingsMigrationVersion")
         }
 
         self.defaultModeId = d.string(forKey: "defaultModeId") ?? "default-cleanup"
@@ -109,7 +115,7 @@ final class Settings: ObservableObject {
         self.toggleHotkeyModifiers = d.object(forKey: "toggleHotkeyModifiers") as? Int
             ?? (1 << 11 | 1 << 8)  // optionKey | cmdKey (Carbon constants)
         self.holdKeyEnabled = d.object(forKey: "holdKeyEnabled") as? Bool ?? true
-        self.holdKey = HoldKey(rawValue: d.string(forKey: "holdKey") ?? "") ?? .rightCommand
+        self.holdKey = HoldKey(rawValue: d.string(forKey: "holdKey") ?? "") ?? .rightOption
         self.playSounds = d.object(forKey: "playSounds") as? Bool ?? false
         self.streamOutput = d.object(forKey: "streamOutput") as? Bool ?? false
         self.sttProvider = STTProviderKind(rawValue: d.string(forKey: "sttProvider") ?? "") ?? .groq
