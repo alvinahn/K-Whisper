@@ -28,7 +28,18 @@ struct TranscriptionResult {
 }
 
 protocol STTProvider {
-    func transcribe(wav: Data, biasPrompt: String?) async throws -> TranscriptionResult
+    /// - Parameters:
+    ///   - wav: 16 kHz mono Int16 WAV data
+    ///   - biasPrompt: optional Whisper-style spelling/glossary bias (~224 token budget)
+    ///   - language: ISO-639-1 code (e.g., "ko", "en") or nil for auto-detect.
+    ///     Forcing language reduces Korean errors when audio is known-Korean.
+    func transcribe(wav: Data, biasPrompt: String?, language: String?) async throws -> TranscriptionResult
+}
+
+extension STTProvider {
+    func transcribe(wav: Data, biasPrompt: String? = nil) async throws -> TranscriptionResult {
+        try await transcribe(wav: wav, biasPrompt: biasPrompt, language: nil)
+    }
 }
 
 enum STTHelpers {

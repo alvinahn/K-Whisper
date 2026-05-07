@@ -24,7 +24,7 @@ struct WhisperClient: STTProvider {
         self.session = session
     }
 
-    func transcribe(wav: Data, biasPrompt: String? = nil) async throws -> TranscriptionResult {
+    func transcribe(wav: Data, biasPrompt: String? = nil, language: String? = nil) async throws -> TranscriptionResult {
         var req = URLRequest(url: endpoint)
         req.httpMethod = "POST"
         req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -51,6 +51,9 @@ struct WhisperClient: STTProvider {
         appendField(name: "temperature", value: "0")
         if let bias = biasPrompt, !bias.isEmpty {
             appendField(name: "prompt", value: bias)
+        }
+        if let lang = language, !lang.isEmpty {
+            appendField(name: "language", value: lang)
         }
         appendFile(name: "file", filename: "audio.wav", mime: "audio/wav", data: wav)
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)

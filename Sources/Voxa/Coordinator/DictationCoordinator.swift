@@ -171,12 +171,14 @@ final class DictationCoordinator: ObservableObject {
             return
         }
 
-        Log.stt.info("→ STT (\(self.settings.sttProvider.rawValue)): uploading \(wav.count) bytes")
+        let langHint = settings.audioLanguage.whisperCode
+        Log.stt.info("→ STT (\(self.settings.sttProvider.rawValue)): uploading \(wav.count) bytes lang=\(langHint ?? "auto")")
         let transcript: TranscriptionResult
         do {
             transcript = try await stt.transcribe(
                 wav: wav,
-                biasPrompt: glossary.whisperBiasPrompt()
+                biasPrompt: glossary.whisperBiasPrompt(),
+                language: langHint
             )
         } catch {
             Log.stt.error("STT failed: \(error.localizedDescription)")

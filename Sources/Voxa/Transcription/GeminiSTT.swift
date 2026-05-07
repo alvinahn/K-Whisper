@@ -28,15 +28,22 @@ struct GeminiSTT: STTProvider {
         self.session = session
     }
 
-    func transcribe(wav: Data, biasPrompt: String? = nil) async throws -> TranscriptionResult {
+    func transcribe(wav: Data, biasPrompt: String? = nil, language: String? = nil) async throws -> TranscriptionResult {
         let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(apiKey)")!
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
+        let languageHint: String = {
+            switch language {
+            case "ko": return "The audio is in Korean (한국어). Transcribe in Korean."
+            case "en": return "The audio is in English. Transcribe in English."
+            default:   return "Language can be Korean (한국어) or English. Detect automatically and transcribe in the same language as spoken."
+            }
+        }()
         var promptText = """
         Transcribe this audio verbatim into text.
-        - Language can be Korean (한국어) or English. Detect automatically and transcribe in the same language as spoken.
+        - \(languageHint)
         - Output ONLY the transcript with no preamble, quotes, or commentary.
         - Do NOT translate. Do NOT clean up filler words.
         """

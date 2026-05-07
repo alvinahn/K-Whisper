@@ -15,6 +15,14 @@ struct GeneralSettingsView: View {
                 }
                 Text(sttHint)
                     .font(.caption).foregroundStyle(.secondary)
+
+                Picker("Audio language", selection: $settings.audioLanguage) {
+                    ForEach(AudioLanguage.allCases) { l in
+                        Text(l.displayName).tag(l)
+                    }
+                }
+                Text("Forcing the language (vs auto-detect) reduces Korean transcription errors when audio is mostly Korean.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
 
             Section("Default mode") {

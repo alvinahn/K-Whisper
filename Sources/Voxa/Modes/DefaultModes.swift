@@ -19,9 +19,21 @@ enum DefaultModes {
         Mode(
             id: "default-cleanup",
             name: "Default cleanup",
-            systemPrompt: "Clean filler words, fix punctuation/capitalization. Preserve meaning. Match input language (English or Korean). Output ONLY the cleaned transcript.",
+            systemPrompt: """
+            Clean a speech-to-text transcript. Match the input language (English or Korean).
+
+            For Korean input, fix common STT errors:
+            - Verb-ending merge failures: 미치고 버렸네 → 미쳐버렸네, 가버렸어 → 가버렸어, 해버렸네 → 해버렸네.
+              Pattern: when "[verb]+고 [aux verb]" looks wrong, try the contracted form "[verb-stem]+어/아 + [aux verb]".
+            - Particle confusion: pick the right one (이/가, 은/는, 을/를, 에/에서, 으로/로) from context.
+            - Compound endings: 했어요 / 했었어요 / 했네요 / 했는데 — keep them whole; don't split.
+
+            For English: remove fillers (um, uh, like, you know), fix punctuation/capitalization.
+
+            Preserve meaning. Don't paraphrase. Output ONLY the cleaned transcript.
+            """,
             provider: .groq,
-            model: DefaultModels.groqLlamaInstant,
+            model: DefaultModels.groqLlamaVersatile,  // 70B handles Korean morphology far better than 8B
             temperature: 0.2,
             maxTokens: 1024,
             isBuiltIn: true

@@ -27,6 +27,28 @@ enum KoreanTone: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+enum AudioLanguage: String, CaseIterable, Identifiable, Codable {
+    case auto
+    case ko
+    case en
+    var id: String { rawValue }
+    var displayName: String {
+        switch self {
+        case .auto: return "Auto-detect"
+        case .ko:   return "Korean (한국어)"
+        case .en:   return "English"
+        }
+    }
+    /// ISO-639-1 code Whisper expects, or nil for auto-detect.
+    var whisperCode: String? {
+        switch self {
+        case .auto: return nil
+        case .ko:   return "ko"
+        case .en:   return "en"
+        }
+    }
+}
+
 @MainActor
 final class Settings: ObservableObject {
     static let shared = Settings()
@@ -61,6 +83,9 @@ final class Settings: ObservableObject {
     @Published var sttProvider: STTProviderKind {
         didSet { UserDefaults.standard.set(sttProvider.rawValue, forKey: "sttProvider") }
     }
+    @Published var audioLanguage: AudioLanguage {
+        didSet { UserDefaults.standard.set(audioLanguage.rawValue, forKey: "audioLanguage") }
+    }
 
     private init() {
         let d = UserDefaults.standard
@@ -78,5 +103,6 @@ final class Settings: ObservableObject {
         self.playSounds = d.object(forKey: "playSounds") as? Bool ?? true
         self.streamOutput = d.object(forKey: "streamOutput") as? Bool ?? false
         self.sttProvider = STTProviderKind(rawValue: d.string(forKey: "sttProvider") ?? "") ?? .groq
+        self.audioLanguage = AudioLanguage(rawValue: d.string(forKey: "audioLanguage") ?? "") ?? .auto
     }
 }
