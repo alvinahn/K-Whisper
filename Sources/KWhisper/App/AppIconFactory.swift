@@ -136,8 +136,27 @@ enum AppIconFactory {
     /// title text, and a horizontal arrow between the icon positions used by `make-dmg.sh`.
     /// Writes a PNG to `url`.
     static func writeDMGBackground(to url: URL) throws {
-        let size = NSSize(width: 540, height: 380)
-        let img = NSImage(size: size, flipped: false) { rect in
+        // We make the NSImage at 2× pixel size so text/lines render at native Retina
+        // density. The drawing code then scales the context by 2× and uses the same
+        // logical 540×380 coordinates as before. Finder still sees a single PNG file
+        // and scales it to fit the 540×380 logical window — on Retina that's 1080×760
+        // physical pixels, matching our PNG 1:1.
+        let logicalSize = NSSize(width: 540, height: 380)
+        let scale: CGFloat = 2
+        let physicalSize = NSSize(
+            width: logicalSize.width * scale,
+            height: logicalSize.height * scale
+        )
+
+        let img = NSImage(size: physicalSize, flipped: false) { _ in
+            guard let cgCtx = NSGraphicsContext.current?.cgContext else { return false }
+            cgCtx.scaleBy(x: scale, y: scale)
+            cgCtx.setShouldSmoothFonts(true)
+            cgCtx.setShouldAntialias(true)
+
+            // From here on, we draw in logical 540×380 coordinates.
+            let rect = NSRect(origin: .zero, size: logicalSize)
+
             // Darker gradient so white text + white arrow have stronger contrast.
             let bg = NSGradient(colors: [
                 NSColor(srgbRed: 0.06, green: 0.06, blue: 0.10, alpha: 1),
