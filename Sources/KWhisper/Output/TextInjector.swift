@@ -76,16 +76,35 @@ enum TextInjector {
     /// Throws if Accessibility permission is missing — without it, the synthesized
     /// keystrokes/paste are silently swallowed by macOS, and the user sees a fake-success HUD.
     static func deliver(_ text: String) throws {
-        guard !text.isEmpty else { return }
+        let cleaned = dedupeExactDoubling(text)
+        guard !cleaned.isEmpty else { return }
         guard AXIsProcessTrusted() else {
             Log.inject.error("AXIsProcessTrusted is false — paste cannot reach the focused app")
             throw DeliveryError.accessibilityNotGranted
         }
         switch Settings.shared.outputMethod {
         case .clipboardPaste:
-            paste(text)
+            paste(cleaned)
         case .syntheticTyping:
-            type(text)
+            type(cleaned)
         }
+    }
+
+    /// Detects and removes the case where an LLM cleanup pass returned the same text
+    /// concatenated with itself (no separator). This sometimes happens with Llama 70B on
+    /// Korean inputs where it echoes the original alongside the cleaned version. We catch
+    /// it as a final safety net so the user never sees the same paragraph pasted twice.
+    static func dedupeExactDoubling(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let n = trimmed.count
+        guard n > 8, n % 2 == 0 else { return text }
+        let mid = trimmed.index(trimmed.startIndex, offsetBy: n / 2)
+        let firstHalf = trimmed[trimmed.startIndex..<mid]
+        let secondHalf = trimmed[mid..<trimmed.endIndex]
+        if firstHalf == secondHalf {
+            Log.inject.warning("Detected exact text duplication; deduping (\(n) → \(n / 2) chars)")
+            return String(firstHalf)
+        }
+        return text
     }
 }

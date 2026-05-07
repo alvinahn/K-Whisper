@@ -4,9 +4,13 @@
 #
 # Pipeline:
 #  1. Render background.png via the K-Whisper binary (--render-dmg-background)
-#  2. Stage the app + Applications symlink + .background folder
-#  3. Create writable DMG, mount it, run AppleScript to set window/bg/icon positions
-#  4. Detach and convert to compressed read-only DMG (UDZO)
+#  2. Stage the app + .background folder
+#  3. Create writable DMG, mount it
+#  4. Make a real Finder alias to /Applications inside the volume
+#     (a `ln -s` symlink shows up as an empty icon — Finder doesn't fetch
+#      the system folder's icon for symlinks. A real alias does.)
+#  5. AppleScript to set window/bg/icon positions
+#  6. Detach and convert to compressed read-only DMG (UDZO)
 #
 # Output: build/K-Whisper-{version}.dmg
 set -euo pipefail
@@ -37,12 +41,11 @@ rm -rf "$STAGE"
 mkdir -p "$BG_DIR"
 "$EXECUTABLE" --render-dmg-background "$BG_PNG" >/dev/null
 
-# 2. Stage app + Applications symlink
-echo "▶︎ Staging app + Applications symlink"
+# 2. Stage app + .background only — Applications alias is created post-mount
+echo "▶︎ Staging app + background"
 cp -R "$APP_PATH" "$STAGE/"
-ln -s /Applications "$STAGE/Applications"
 
-# 3. Create writable DMG
+# 3. Create writable DMG (with extra free space for the alias we'll create)
 echo "▶︎ Creating writable DMG"
 rm -f "$RW_DMG" "$FINAL_DMG"
 hdiutil create \
@@ -51,9 +54,10 @@ hdiutil create \
     -fs HFS+ \
     -fsargs "-c c=64,a=16,e=16" \
     -format UDRW \
+    -size 30m \
     "$RW_DMG" >/dev/null
 
-# Mount it. We grep for the device node so we can detach precisely later.
+# 4. Mount
 echo "▶︎ Mounting and configuring window"
 DEV=$(hdiutil attach -readwrite -noverify -noautoopen "$RW_DMG" \
     | grep -E '^/dev/' \
@@ -61,10 +65,22 @@ DEV=$(hdiutil attach -readwrite -noverify -noautoopen "$RW_DMG" \
     | awk '{print $1}')
 MOUNT_POINT="/Volumes/$VOLUME_NAME"
 
-# Wait briefly for Finder to register the volume
 sleep 1
 
-# 4. AppleScript: window size, icon view, bg image, icon positions
+# 5. Create a *real Finder alias* (not a symlink) to /Applications inside the volume
+#    so that the icon shows the real Applications-folder appearance instead of an empty box.
+osascript <<MAKE_ALIAS
+tell application "Finder"
+    set appsFolder to (path to applications folder from local domain) as alias
+    tell disk "$VOLUME_NAME"
+        make new alias file at it to appsFolder with properties {name:"Applications"}
+    end tell
+end tell
+MAKE_ALIAS
+
+sleep 0.5
+
+# 6. AppleScript: window size, icon view, bg image, icon positions
 osascript <<APPLESCRIPT
 on run
     tell application "Finder"
@@ -80,13 +96,11 @@ on run
             set viewOpts to icon view options of container window
             set arrangement of viewOpts to not arranged
             set icon size of viewOpts to 96
-            set text size of viewOpts to 12
+            set text size of viewOpts to 13
 
-            -- POSIX file path then coerce to alias — robust across macOS versions.
             set bgFile to POSIX file "$MOUNT_POINT/.background/background.png" as alias
             set background picture of viewOpts to bgFile
 
-            -- AppleScript icon positions are CENTER points, measured from window's top-left.
             set position of item "$APP_NAME.app" of container window to {140, 200}
             set position of item "Applications" of container window to {400, 200}
 
@@ -99,25 +113,23 @@ on run
 end run
 APPLESCRIPT
 
-# Hide the .background folder (HFS hidden flag)
+# Hide .background from default view
 chflags hidden "$MOUNT_POINT/.background"
 
-# Wait for Finder to commit .DS_Store
+# Wait for Finder to flush .DS_Store
 sync
 sleep 1
 
-# 5. Detach
+# 7. Detach
 echo "▶︎ Detaching"
 hdiutil detach "$DEV" -quiet || hdiutil detach "$DEV" -force >/dev/null
 
-# 6. Convert to compressed read-only DMG (UDZO)
+# 8. Compress
 echo "▶︎ Compressing → $DMG_NAME"
 hdiutil convert "$RW_DMG" -format UDZO -imagekey zlib-level=9 -o "$FINAL_DMG" >/dev/null
 
-# Ad-hoc sign for cleanliness (won't matter for unsigned-app distribution but harmless)
 codesign --force --sign - "$FINAL_DMG" 2>/dev/null || true
 
-# Cleanup
 rm -f "$RW_DMG"
 rm -rf "$STAGE"
 

@@ -138,56 +138,61 @@ enum AppIconFactory {
     static func writeDMGBackground(to url: URL) throws {
         let size = NSSize(width: 540, height: 380)
         let img = NSImage(size: size, flipped: false) { rect in
-            // Soft dark gradient background
+            // Darker gradient so white text + white arrow have stronger contrast.
             let bg = NSGradient(colors: [
-                NSColor(srgbRed: 0.10, green: 0.10, blue: 0.13, alpha: 1),
-                NSColor(srgbRed: 0.18, green: 0.16, blue: 0.22, alpha: 1)
+                NSColor(srgbRed: 0.06, green: 0.06, blue: 0.10, alpha: 1),
+                NSColor(srgbRed: 0.13, green: 0.11, blue: 0.18, alpha: 1)
             ])!
             bg.draw(in: rect, angle: 90)
 
-            // Subtle accent stripe across the top
-            let accent = NSGradient(colors: [voxaIndigo.withAlphaComponent(0.0), voxaIndigo.withAlphaComponent(0.35), voxaIndigo.withAlphaComponent(0.0)])!
+            // Indigo accent stripe across the top
+            let accent = NSGradient(colors: [voxaIndigo.withAlphaComponent(0.0), voxaIndigo.withAlphaComponent(0.45), voxaIndigo.withAlphaComponent(0.0)])!
             accent.draw(in: NSRect(x: 0, y: rect.height - 4, width: rect.width, height: 4), angle: 0)
 
-            // Title
+            // Drop-shadow for the title so it pops against the gradient.
+            let titleShadow = NSShadow()
+            titleShadow.shadowColor = NSColor.black.withAlphaComponent(0.55)
+            titleShadow.shadowBlurRadius = 6
+            titleShadow.shadowOffset = NSSize(width: 0, height: -1)
+
+            // Title — bigger, bolder, with shadow
             let titleStyle = NSMutableParagraphStyle()
             titleStyle.alignment = .center
             let titleAttrs: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 19, weight: .semibold),
+                .font: NSFont.systemFont(ofSize: 24, weight: .bold),
                 .foregroundColor: NSColor.white,
-                .paragraphStyle: titleStyle
+                .paragraphStyle: titleStyle,
+                .shadow: titleShadow
             ]
             let title = "Install K-Whisper" as NSString
             let titleSize = title.size(withAttributes: titleAttrs)
             title.draw(
-                at: NSPoint(x: (rect.width - titleSize.width) / 2, y: rect.height - 56),
+                at: NSPoint(x: (rect.width - titleSize.width) / 2, y: rect.height - 60),
                 withAttributes: titleAttrs
             )
 
-            // Subtitle
+            // Subtitle — bigger, more opaque
             let subAttrs: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 12, weight: .regular),
-                .foregroundColor: NSColor.white.withAlphaComponent(0.7)
+                .font: NSFont.systemFont(ofSize: 14, weight: .medium),
+                .foregroundColor: NSColor.white.withAlphaComponent(0.92),
+                .shadow: titleShadow
             ]
-            let subtitle = "Drag the icon onto the Applications folder" as NSString
+            let subtitle = "Drag K-Whisper onto the Applications folder" as NSString
             let subSize = subtitle.size(withAttributes: subAttrs)
             subtitle.draw(
-                at: NSPoint(x: (rect.width - subSize.width) / 2, y: rect.height - 80),
+                at: NSPoint(x: (rect.width - subSize.width) / 2, y: rect.height - 92),
                 withAttributes: subAttrs
             )
 
-            // Arrow between icon positions.
-            // AppleScript places K-Whisper at {140, 200} and Applications at {400, 200}
-            // (center, measured from top-left). In our PNG (origin bottom-left, 380 tall),
-            // that's y = 380 - 200 = 180. Arrow at icon vertical center.
+            // Arrow between icon positions — brighter for visibility.
             let arrowY: CGFloat = 200
             let startX: CGFloat = 200
             let endX: CGFloat   = 340
-            let stroke = NSColor.white.withAlphaComponent(0.55)
+            let stroke = NSColor.white.withAlphaComponent(0.85)
             stroke.setStroke()
 
             let line = NSBezierPath()
-            line.lineWidth = 3.0
+            line.lineWidth = 3.5
             line.lineCapStyle = .round
             line.move(to: NSPoint(x: startX, y: arrowY))
             line.line(to: NSPoint(x: endX - 4, y: arrowY))
@@ -195,9 +200,9 @@ enum AppIconFactory {
 
             // Arrowhead — filled triangle at the end
             let head = NSBezierPath()
-            head.move(to: NSPoint(x: endX + 8, y: arrowY))
-            head.line(to: NSPoint(x: endX - 6, y: arrowY + 8))
-            head.line(to: NSPoint(x: endX - 6, y: arrowY - 8))
+            head.move(to: NSPoint(x: endX + 10, y: arrowY))
+            head.line(to: NSPoint(x: endX - 6, y: arrowY + 10))
+            head.line(to: NSPoint(x: endX - 6, y: arrowY - 10))
             head.close()
             stroke.setFill()
             head.fill()
