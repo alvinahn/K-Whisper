@@ -6,16 +6,16 @@ Project-specific instructions for Claude Code working on this repo.
 
 A native macOS menu-bar dictation app, Korean+English-focused, modeled after Superwhisper. Owner: Alvin (alvinahn). Personal-use; not currently distributed.
 
-The user's name for the app internally is **Voxa**. The repo on GitHub is **STT-KR**. Use "Voxa" in code/UI strings; use "STT-KR" only when referring to the repo.
+App name: **K-Whisper** (display) / `KWhisper` (binary, Swift target, paths) / `app.kwhisper` (bundle identifier). The repo lives at `github.com/alvinahn/k-whisper`.
 
 ## Build / run
 
 ```bash
-./build.sh           # full pipeline: swift build + iconset → .icns + ad-hoc sign + assemble Voxa.app
-open build/Voxa.app  # launch the bundled app (NOT `swift run` — global hotkeys + perms only work as a real .app)
+./build.sh           # full pipeline: swift build + iconset → .icns + ad-hoc sign + assemble K-Whisper.app
+open build/K-Whisper.app  # launch the bundled app (NOT `swift run` — global hotkeys + perms only work as a real .app)
 ```
 
-`./build.sh` outputs to `build/Voxa.app`. Each rebuild produces a new ad-hoc code signature, which **invalidates macOS Accessibility / Input-Monitoring grants**. Tell the user to re-grant Accessibility in System Settings after a rebuild if hotkeys or paste suddenly stop working.
+`./build.sh` outputs to `build/K-Whisper.app`. Each rebuild produces a new ad-hoc code signature, which **invalidates macOS Accessibility / Input-Monitoring grants**. Tell the user to re-grant Accessibility in System Settings after a rebuild if hotkeys or paste suddenly stop working.
 
 The app is **unsigned** (no Apple Developer ID). First launch needs right-click → Open. macOS will eventually treat it as trusted for that bundle path, but each rebuild resets the grant.
 
@@ -32,15 +32,15 @@ HoldKeyMonitor (NSEvent flag-changed) ──► HotkeyManager ──► Dictatio
                                                                   └── TextInjector (clipboard paste at cursor)
 ```
 
-`DictationCoordinator.runPipeline` (Sources/Voxa/Coordinator/DictationCoordinator.swift) is the orchestration entry point. Trace there first.
+`DictationCoordinator.runPipeline` (Sources/KWhisper/Coordinator/DictationCoordinator.swift) is the orchestration entry point. Trace there first.
 
 ## Critical conventions
 
 - **Stay native.** No Electron, no Tauri, no third-party UI frameworks.
 - **No new SPM dependencies** unless absolutely required. The current Package.swift has zero external deps and that's intentional. SecretsStore replaced KeychainAccess for this reason.
-- **Storage**: API keys live in `~/Library/Application Support/Voxa/secrets.json` with 0600 perms. **Do not** revert to Keychain — every rebuild's new ad-hoc signature would re-prompt the user for keychain access.
-- **Logging**: use `Log.app/audio/hotkey/stt/llm/inject/ui` from `Util/Logger.swift`. The user views these via Console.app filtered to `subsystem == im.navio.voxa`.
-- **Permissions**: Voxa needs only Microphone + Accessibility. Avoid features that require Input Monitoring (right-Cmd / right-Opt are normal modifiers — they go through `NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged)` which is permission-free).
+- **Storage**: API keys live in `~/Library/Application Support/K-Whisper/secrets.json` with 0600 perms. **Do not** revert to Keychain — every rebuild's new ad-hoc signature would re-prompt the user for keychain access.
+- **Logging**: use `Log.app/audio/hotkey/stt/llm/inject/ui` from `Util/Logger.swift`. The user views these via Console.app filtered to `subsystem == app.kwhisper`.
+- **Permissions**: K-Whisper needs only Microphone + Accessibility. Avoid features that require Input Monitoring (right-Cmd / right-Opt are normal modifiers — they go through `NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged)` which is permission-free).
 - **Hold-to-talk has a 150 ms activation delay** so chords like `right-Cmd + Backspace` keep working system-wide. Don't shorten this without understanding the trade-off.
 - **Paste delay**: 80 ms clipboard restore (was 250 ms). Don't lengthen.
 
@@ -74,10 +74,10 @@ If a change pushes any single stage over budget, flag it explicitly to the user.
 
 - Run `./build.sh` after every change. **Don't** rely on `swift build` alone — bundle assembly + signing is part of the test loop.
 - After non-trivial changes, tell the user to **re-grant Accessibility** if paste or hotkeys behave oddly.
-- Default modes live in `Sources/Voxa/Modes/DefaultModes.swift`. `ModeManager.load()` always refreshes built-ins from code on launch (user-defined modes persist across launches).
+- Default modes live in `Sources/KWhisper/Modes/DefaultModes.swift`. `ModeManager.load()` always refreshes built-ins from code on launch (user-defined modes persist across launches).
 
 ## Repo / contact
 
-- GitHub: https://github.com/alvinahn/STT-KR
+- GitHub: https://github.com/alvinahn/K-Whisper
 - Owner email: dev@navio.im / admin@navio.im
 - Branch: `main`

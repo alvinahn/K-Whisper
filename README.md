@@ -1,4 +1,4 @@
-# STT-KR (Voxa)
+# K-Whisper
 
 A native macOS dictation app focused on **Korean + English** with high accuracy and sub-second latency. Hold a key, speak, and your transcribed text appears at the cursor — with optional LLM post-processing for cleanup, translation, or reformatting.
 
@@ -14,7 +14,7 @@ Built as a personal alternative to Superwhisper, using your own API keys.
 - **Glossary** for proper nouns / project terms (biases STT and LLM cleanup)
 - **Floating HUD pill** with live waveform, elapsed time, and current mode
 - **Searchable history** of all dictations
-- **API keys stored locally** in `~/Library/Application Support/Voxa/secrets.json` (0600 permissions, never sent anywhere except the provider's API)
+- **API keys stored locally** in `~/Library/Application Support/K-Whisper/secrets.json` (0600 permissions, never sent anywhere except the provider's API)
 - Native AppKit + SwiftUI; menu bar app, Dock icon shows only when Settings is open
 
 ## Speed
@@ -30,9 +30,9 @@ Target: **~400–800 ms end-to-end** on a warm pipeline.
 ## Build & run
 
 ```bash
-cd stt-kr
-./build.sh                    # produces build/Voxa.app
-open build/Voxa.app           # right-click → Open the first time (unsigned)
+cd k-whisper
+./build.sh                    # produces build/K-Whisper.app
+open build/K-Whisper.app           # right-click → Open the first time (unsigned)
 ```
 
 To open in Xcode for development: `xed Package.swift` (or File → Open → select `Package.swift`).
@@ -61,13 +61,13 @@ To open in Xcode for development: `xed Package.swift` (or File → Open → sele
 ## Project layout
 
 ```
-stt-kr/
+k-whisper/
 ├── Package.swift                  SPM executable target, no external deps
-├── build.sh                       Builds + ad-hoc-signs Voxa.app, embeds AppIcon.icns
+├── build.sh                       Builds + ad-hoc-signs K-Whisper.app, embeds AppIcon.icns
 ├── Resources/
 │   ├── Info.plist
-│   └── Voxa.entitlements
-└── Sources/Voxa/
+│   └── KWhisper.entitlements
+└── Sources/KWhisper/
     ├── App/                       main, AppDelegate, MenuBarController, MainMenu, AppIconFactory
     ├── Audio/                     AudioRecorder (AVAudioRecorder), WAVEncoder
     ├── Hotkey/                    Carbon toggle + NSEvent flag-changed hold monitor

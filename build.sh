@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# Build Voxa.app bundle from the SPM executable.
+# Build K-Whisper.app bundle from the SPM executable.
 #
 # Usage: ./build.sh [debug|release]   (default: release)
 set -euo pipefail
 
 CONFIG="${1:-release}"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-APP="Voxa"
-BUNDLE_ID="im.navio.voxa"
-APP_DIR="$ROOT/build/$APP.app"
+APP="KWhisper"
+BUNDLE_NAME="K-Whisper"
+APP_DIR="$ROOT/build/$BUNDLE_NAME.app"
 BIN_DIR="$APP_DIR/Contents/MacOS"
 RES_DIR="$APP_DIR/Contents/Resources"
 
-echo "▶︎ Building Voxa ($CONFIG)…"
+echo "▶︎ Building K-Whisper ($CONFIG)…"
 cd "$ROOT"
 swift build -c "$CONFIG"
 
@@ -40,7 +40,7 @@ cp "$ROOT/build/AppIcon.icns" "$RES_DIR/AppIcon.icns"
 
 # Ad-hoc sign so the OS lets you launch it (without an Apple Developer ID).
 echo "▶︎ Ad-hoc codesigning…"
-codesign --force --deep --sign - --entitlements "$ROOT/Resources/Voxa.entitlements" "$APP_DIR"
+codesign --force --deep --sign - --entitlements "$ROOT/Resources/KWhisper.entitlements" "$APP_DIR"
 
 # Tell Finder/Dock to refresh icon caches for this bundle.
 touch "$APP_DIR"

@@ -2,17 +2,17 @@
 import PackageDescription
 
 let package = Package(
-    name: "Voxa",
+    name: "KWhisper",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "Voxa", targets: ["Voxa"])
+        .executable(name: "KWhisper", targets: ["KWhisper"])
     ],
     dependencies: [],
     targets: [
         .executableTarget(
-            name: "Voxa",
+            name: "KWhisper",
             dependencies: [],
-            path: "Sources/Voxa",
+            path: "Sources/KWhisper",
             swiftSettings: [
                 .swiftLanguageMode(.v5)
             ]
