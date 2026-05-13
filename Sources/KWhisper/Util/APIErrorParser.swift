@@ -31,6 +31,35 @@ enum APIErrorParser {
         }
     }
 
+    /// Maps `URLError` (transport-level failures: offline, timeout, DNS, etc.) into
+    /// a human-friendly title + hint pair. Returns nil for codes we don't want to
+    /// surface as user-facing errors (e.g. `.cancelled` is a user action, not an error).
+    static func urlError(_ error: URLError) -> (title: String, hint: String)? {
+        switch error.code {
+        case .cancelled:
+            return nil  // user cancelled — handled separately, no HUD error
+        case .notConnectedToInternet:
+            return ("No internet connection", "Check your Wi-Fi · Esc to dismiss")
+        case .networkConnectionLost:
+            return ("Network connection dropped", "Try again · Esc to dismiss")
+        case .timedOut:
+            return ("Request timed out", "Network is slow · try again")
+        case .cannotFindHost, .dnsLookupFailed:
+            return ("Can't reach server (DNS)", "Check your connection · Esc to dismiss")
+        case .cannotConnectToHost:
+            return ("Can't reach server", "Provider may be down · try again")
+        case .internationalRoamingOff, .callIsActive, .dataNotAllowed:
+            return ("Network unavailable", "Check your connection · Esc to dismiss")
+        case .secureConnectionFailed, .serverCertificateUntrusted,
+             .serverCertificateHasBadDate, .serverCertificateHasUnknownRoot,
+             .serverCertificateNotYetValid, .clientCertificateRejected,
+             .clientCertificateRequired:
+            return ("Secure connection failed", "TLS error · check system clock")
+        default:
+            return ("Network error", error.localizedDescription)
+        }
+    }
+
     // MARK: - Internals
 
     private static func parseMessage(from body: String) -> String {

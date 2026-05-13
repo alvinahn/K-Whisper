@@ -55,7 +55,7 @@ The same hold key is BOTH push-to-talk AND a tap-to-toggle. `HoldKeyMonitor` emi
 
 - **Hold key**: Right ⌥ Option (Superwhisper-style). Migration v2 forces this once for existing users.
 - **Sounds**: OFF by default (migration v1).
-- **STT provider**: Groq Whisper Large-v3-Turbo. Pipeline auto-falls-back to whichever provider key is present.
+- **STT provider**: Groq Whisper Large-v3 (full, not turbo — turbo strips Korean confirmation `?` and normalizes colloquial spellings like 같애 → 같아). Pipeline auto-falls-back to whichever provider key is present.
 - **Default cleanup**: Groq `llama-3.3-70b-versatile` (NOT 8B — 70B handles Korean morphology far better).
 - **Audio language hint**: auto-detect.
 - **HUD position**: vertically + horizontally centered on screen.
@@ -75,7 +75,7 @@ If a change pushes any single stage over budget, flag it explicitly to the user.
 
 ## Korean accuracy rules of thumb
 
-- Always pass Korean-or-mixed audio through `whisper-large-v3-turbo` (Groq) or better. The older OpenAI `whisper-1` API is **not acceptable** for Korean — it's the v2-era model with weak Korean.
+- Always pass Korean-or-mixed audio through `whisper-large-v3` (Groq) — full model, not turbo. The older OpenAI `whisper-1` API is **not acceptable** for Korean — it's the v2-era model with weak Korean.
 - Default cleanup prompt explicitly catches verb-merge errors (e.g. `미치고 버렸네` → `미쳐버렸네`), particle confusion, compound endings.
 - Glossary terms inject into BOTH the STT `prompt` field AND the LLM cleanup system prompt.
 - Korean tone (반말/존댓말) is configurable in Settings → General. Translation modes interpolate `{KOREAN_TONE}` from the system prompt.

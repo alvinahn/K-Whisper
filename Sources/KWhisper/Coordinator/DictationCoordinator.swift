@@ -31,6 +31,20 @@ final class DictationCoordinator: ObservableObject {
     private var nextModeId: String?  // overrides default for the next dictation
     private var elapsedSubscription: AnyCancellable?
     private var levelSubscription: AnyCancellable?
+    private var pipelineTask: Task<Void, Never>?
+    private var errorDismissWorkItem: DispatchWorkItem?
+    private var errorActive: Bool = false
+
+    /// Internal sentinel for "we tried to dictate but the user is offline." Surfaces
+    /// as a clean error in the HUD instead of waiting for HTTP to time out.
+    enum PipelineError: Error, LocalizedError {
+        case offline
+        var errorDescription: String? {
+            switch self {
+            case .offline: return "No internet connection"
+            }
+        }
+    }
 
     private init() {}
 
@@ -129,7 +143,12 @@ final class DictationCoordinator: ObservableObject {
         case .tap:
             handleTap()
         case .escape:
-            // Esc behaves the same as a tap of the configured key: stop + run pipeline.
+            // Esc semantics depend on phase:
+            //  - .recording: stop + run pipeline (same as a tap)
+            //  - .processing: cancel the in-flight network calls
+            //  - error HUD showing (state .idle): dismiss the error
+            if errorActive { dismissError(); return }
+            if case .processing = state { cancelProcessing(); return }
             handleTap()
         case .holdStart:
             if case .idle = state { beginRecording(trigger: .hold) }
@@ -146,11 +165,13 @@ final class DictationCoordinator: ObservableObject {
     private func handleTap() {
         switch state {
         case .idle:
+            if errorActive { dismissError() }
             beginRecording(trigger: .toggle)
         case .recording:
             endRecording()
         case .processing:
-            break
+            // A second tap during processing = user wants out.
+            cancelProcessing()
         }
     }
 
@@ -181,15 +202,19 @@ final class DictationCoordinator: ObservableObject {
         guard case .recording(let modeId, _) = state else { return }
         state = .processing
         hud.model.phase = .transcribing
-        hotkey.setEscapeCaptureActive(false)
+        // Keep Esc capture ON through .processing so the user can cancel a stuck
+        // network call. We turn it off when the pipeline succeeds/fails/cancels.
         playSound(.stop)
 
         do {
             let wav = try recorder.stop()
             Log.app.info("⏹ recording stopped, captured \(wav.count) bytes WAV")
-            Task { await self.runPipeline(wav: wav, modeId: modeId) }
+            pipelineTask = Task { [weak self] in
+                await self?.runPipeline(wav: wav, modeId: modeId)
+            }
         } catch {
             Log.app.error("recorder.stop failed: \(error.localizedDescription)")
+            hotkey.setEscapeCaptureActive(false)
             showError(error)
             state = .idle
         }
@@ -202,16 +227,35 @@ final class DictationCoordinator: ObservableObject {
         hud.hide()
     }
 
+    /// User-initiated cancel while the network pipeline is running. Cancels the
+    /// in-flight URLSession task (which throws `URLError.cancelled`), hides the HUD
+    /// immediately, and returns to idle without flashing an error.
+    private func cancelProcessing() {
+        Log.app.info("✕ pipeline cancelled by user")
+        pipelineTask?.cancel()
+        pipelineTask = nil
+        hotkey.setEscapeCaptureActive(false)
+        state = .idle
+        hud.model.phase = .idle
+        hud.hide()
+    }
+
     private func runPipeline(wav: Data, modeId: String) async {
         let mode = modes.mode(id: modeId) ?? DefaultModes.all[0]
+
+        // Fail fast if NWPathMonitor says we're offline — avoids a 12s HTTP wait.
+        if !NetworkReachability.shared.isOnline {
+            Log.app.error("pipeline aborted: offline (NWPathMonitor)")
+            failPipeline(with: PipelineError.offline)
+            return
+        }
 
         let stt: STTProvider
         do {
             stt = try makeSTT()
         } catch {
             Log.stt.error("STT init failed: \(error.localizedDescription)")
-            showError(error)
-            state = .idle
+            failPipeline(with: error)
             return
         }
 
@@ -225,14 +269,25 @@ final class DictationCoordinator: ObservableObject {
                 language: langHint
             )
         } catch {
+            if Self.isUserCancel(error) {
+                Log.stt.info("STT cancelled by user")
+                return  // cancelProcessing already cleaned up
+            }
             Log.stt.error("STT failed: \(error.localizedDescription)")
-            showError(error)
-            state = .idle
+            failPipeline(with: error)
             return
         }
 
         Log.stt.info("← STT: lang=\(transcript.language) dur=\(transcript.durationMs)ms text=\"\(transcript.text)\"")
         hud.model.language = transcript.language
+
+        // Step 1.5: deterministic glossary-alias substitution. STT mishearings of
+        // known proper nouns (e.g. "션" → "셔니") get rewritten here, before the LLM
+        // ever sees them.
+        let correctedText = glossary.applySubstitutions(to: transcript.text)
+        if correctedText != transcript.text {
+            Log.stt.info("glossary subs: \"\(transcript.text)\" → \"\(correctedText)\"")
+        }
 
         // Step 2: post-process via selected LLM mode.
         hud.model.phase = .processing(modeName: mode.name)
@@ -243,24 +298,42 @@ final class DictationCoordinator: ObservableObject {
             koreanTone: settings.koreanTone
         )
 
-        let final: String
+        let llmOutput: String
         do {
             Log.llm.info("→ Post-process via \(mode.provider.rawValue) (\(mode.model))")
-            final = try await processor.run(transcript: transcript.text)
-            Log.llm.info("← Post-process out: \"\(final)\"")
+            llmOutput = try await processor.run(transcript: correctedText)
+            Log.llm.info("← Post-process out: \"\(llmOutput)\"")
         } catch {
+            if Self.isUserCancel(error) {
+                Log.llm.info("Post-process cancelled by user")
+                return
+            }
             Log.llm.error("Post-process failed: \(error.localizedDescription)")
-            showError(error)
-            state = .idle
+            failPipeline(with: error)
             return
+        }
+
+        // Step 2.5: deterministic punctuation restoration. Llama 70B occasionally
+        // strips terminal `?`/`.`/`!` despite the explicit preserve rule. Restore
+        // any that went missing, scoped to the conservative default-cleanup mode
+        // where the LLM is supposed to be near-passthrough. Other modes (Email,
+        // Slack, translation) intentionally rewrite, so we leave them alone.
+        let final: String
+        if mode.id == "default-cleanup" {
+            let restored = PunctuationRestorer.restore(input: correctedText, output: llmOutput)
+            if restored != llmOutput {
+                Log.llm.info("punctuation restored: \"\(llmOutput)\" → \"\(restored)\"")
+            }
+            final = restored
+        } else {
+            final = llmOutput
         }
 
         guard !final.isEmpty else {
             Log.app.error("Pipeline produced empty text — nothing to paste")
-            showError(NSError(domain: "K-Whisper", code: 1, userInfo: [
+            failPipeline(with: NSError(domain: "K-Whisper", code: 1, userInfo: [
                 NSLocalizedDescriptionKey: "Empty result — nothing to paste."
             ]))
-            state = .idle
             return
         }
 
@@ -271,8 +344,7 @@ final class DictationCoordinator: ObservableObject {
             try TextInjector.deliver(final)
         } catch {
             Log.inject.error("Delivery failed: \(error.localizedDescription)")
-            showError(error)
-            state = .idle
+            failPipeline(with: error)
             return
         }
 
@@ -287,6 +359,8 @@ final class DictationCoordinator: ObservableObject {
         ))
 
         hud.model.phase = .delivered
+        pipelineTask = nil
+        hotkey.setEscapeCaptureActive(false)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
             guard let self else { return }
             if case .idle = self.state {
@@ -297,19 +371,72 @@ final class DictationCoordinator: ObservableObject {
         state = .idle
     }
 
+    /// Returns true if `error` represents a user-initiated cancellation (either Swift
+    /// concurrency cancellation or URLSession's `.cancelled` code). We never want to
+    /// show an error HUD in that case — `cancelProcessing` has already cleaned up.
+    private static func isUserCancel(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if let url = error as? URLError, url.code == .cancelled { return true }
+        return false
+    }
+
+    /// Unified failure path used by every catch in `runPipeline`: hides the spinner,
+    /// resets state, drops Esc-cancel capture (showError will re-enable it for Esc-to-dismiss),
+    /// and surfaces a contextual error in the HUD.
+    private func failPipeline(with error: Error) {
+        pipelineTask = nil
+        hotkey.setEscapeCaptureActive(false)
+        state = .idle
+        showError(error)
+    }
+
     private func showError(_ error: Error) {
         Log.app.error("✗ \(error.localizedDescription)")
-        let status = Self.extractHTTPStatus(from: error)
-        let hint = Self.customHint(for: error)
-            ?? status.flatMap { APIErrorParser.hint(status: $0) }
-            ?? "See Console.app · filter app.kwhisper"
-        hud.model.phase = .error(message: error.localizedDescription, hint: hint)
+
+        let title: String
+        let hint: String
+
+        if let urlErr = error as? URLError, let mapped = APIErrorParser.urlError(urlErr) {
+            title = mapped.title
+            hint = mapped.hint
+        } else if case PipelineError.offline = error {
+            title = "No internet connection"
+            hint = "Check your Wi-Fi · Esc to dismiss"
+        } else {
+            let status = Self.extractHTTPStatus(from: error)
+            title = error.localizedDescription
+            hint = Self.customHint(for: error)
+                ?? status.flatMap { APIErrorParser.hint(status: $0) }
+                ?? "Esc to dismiss · or check Console.app"
+        }
+
+        hud.model.phase = .error(message: title, hint: hint)
         hud.show()
-        // Persist error 10s so user has time to read it.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) { [weak self] in
-            guard let self else { return }
-            if case .idle = self.state { self.hud.hide() }
-            self.hud.model.phase = .idle
+
+        // Allow Esc to dismiss the error immediately rather than waiting 10s.
+        errorActive = true
+        hotkey.setEscapeCaptureActive(true)
+
+        // Auto-dismiss after 10s so the HUD doesn't linger forever if the user walks away.
+        errorDismissWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.dismissError()
+        }
+        errorDismissWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0, execute: work)
+    }
+
+    /// Tears down the error HUD + Esc capture. Safe to call multiple times.
+    private func dismissError() {
+        errorDismissWorkItem?.cancel()
+        errorDismissWorkItem = nil
+        errorActive = false
+        if case .idle = state {
+            hotkey.setEscapeCaptureActive(false)
+            hud.hide()
+        }
+        if case .error = hud.model.phase {
+            hud.model.phase = .idle
         }
     }
 

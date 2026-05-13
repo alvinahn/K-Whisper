@@ -9,9 +9,12 @@ struct GlossaryView: View {
             Text("Add proper nouns, names, brand terms, and technical jargon. They get injected into Whisper's bias prompt and into post-processing prompts to preserve correct spelling.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            Text("Tip: use `name|alias1,alias2` to deterministically rewrite STT mishearings. Example: `셔니|션,쇼니` will replace any standalone 션/쇼니 with 셔니 (won't touch 옵션 etc.).")
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             HStack {
-                TextField("e.g. BoundX, Junho, Navio", text: $newTerm)
+                TextField("e.g. BoundX, Junho, 셔니|션,쇼니", text: $newTerm)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit { add() }
                 Button("Add", action: add)

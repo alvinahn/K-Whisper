@@ -82,8 +82,9 @@ struct HUDView: View {
                 ? "\(model.modeName) · \(exitHint)"
                 : "\(model.modeName) · (no signal — speak up?)"
         case .processing:
-            return model.language.isEmpty ? model.modeName : "\(model.modeName) · \(model.language.uppercased())"
-        case .transcribing: return model.modeName
+            let langPart = model.language.isEmpty ? model.modeName : "\(model.modeName) · \(model.language.uppercased())"
+            return "\(langPart) · Esc to cancel"
+        case .transcribing: return "\(model.modeName) · Esc to cancel"
         case .error(_, let hint): return hint ?? "See Console.app · filter app.kwhisper"
         default: return model.modeName
         }

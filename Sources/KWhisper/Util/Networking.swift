@@ -8,8 +8,11 @@ enum Networking {
         cfg.httpAdditionalHeaders = ["User-Agent": "K-Whisper/0.1 (macOS; native)"]
         cfg.httpMaximumConnectionsPerHost = 4
         cfg.requestCachePolicy = .reloadIgnoringLocalCacheData
-        cfg.timeoutIntervalForRequest = 30
-        cfg.timeoutIntervalForResource = 90
+        // Tight timeouts: dictation E2E budget is ~1s. 12s gives generous headroom
+        // for slow LLM responses without making the user stare at a stuck HUD when
+        // the network is dead. Pipeline also pre-checks NWPathMonitor before firing.
+        cfg.timeoutIntervalForRequest = 12
+        cfg.timeoutIntervalForResource = 20
         cfg.waitsForConnectivity = false
         return URLSession(configuration: cfg)
     }()

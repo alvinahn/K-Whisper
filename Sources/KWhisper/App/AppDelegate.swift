@@ -17,6 +17,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Pre-warm TLS to the API hosts so the first dictation lands on a warm connection.
         Networking.prewarm()
 
+        // Begin watching network reachability so the pipeline can fail fast when offline.
+        NetworkReachability.shared.start()
+
         MainMenuBuilder.install()
         MenuBarController.shared.install()
         DictationCoordinator.shared.start()

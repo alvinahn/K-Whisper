@@ -1,11 +1,14 @@
 import Foundation
 
-/// Groq-hosted Whisper Large-v3-Turbo via their OpenAI-compatible audio transcription endpoint.
+/// Groq-hosted Whisper Large-v3 via their OpenAI-compatible audio transcription endpoint.
 ///
 /// - Endpoint: `https://api.groq.com/openai/v1/audio/transcriptions`
-/// - Default model: `whisper-large-v3-turbo` (216× realtime, $0.04/hr)
-/// - Optional opt-in: `whisper-large-v3` (189× realtime, $0.111/hr) for slightly higher accuracy
-///   on edge accents at ~2× cost.
+/// - Default model: `whisper-large-v3` (189× realtime, $0.111/hr) — full model. Korean
+///   punctuation/intonation (`?` after ~거든/~지/~잖아) + rare-word recognition is meaningfully
+///   better than the distilled turbo variant. Free-tier on Groq covers it.
+/// - Faster alternative: `whisper-large-v3-turbo` (216× realtime, $0.04/hr) — distilled,
+///   weaker on Korean punctuation. Was the default; switched after observing turbo strip
+///   confirmation `?` and normalize colloquial spellings like 같애 → 같아.
 ///
 /// Same wire format as OpenAI's Whisper, so the multipart shape mirrors `WhisperClient`.
 struct GroqWhisperSTT: STTProvider {
@@ -29,7 +32,7 @@ struct GroqWhisperSTT: STTProvider {
 
     init(
         apiKey: String,
-        model: String = "whisper-large-v3-turbo",
+        model: String = "whisper-large-v3",
         session: URLSession = Networking.shared
     ) {
         self.apiKey = apiKey
