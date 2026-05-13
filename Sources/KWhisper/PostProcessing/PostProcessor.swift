@@ -53,6 +53,16 @@ struct PostProcessor {
         if !language.isEmpty {
             system += "\n\nDetected language: \(language)."
         }
-        return (system, transcript)
+
+        // Keep the variable transcript fenced off from the instructions so dictated
+        // commands are treated as data, not executed as chat requests.
+        let wrappedUser = """
+        <transcript_to_clean>
+        \(transcript)
+        </transcript_to_clean>
+
+        Use only the text inside the tags as the input. Follow the system instructions for this mode. Output only the final result.
+        """
+        return (system, wrappedUser)
     }
 }

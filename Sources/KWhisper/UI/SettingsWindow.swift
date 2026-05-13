@@ -25,7 +25,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "K-Whisper Settings"
+        window.title = "K-Whisper 설정"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.toolbarStyle = .unified
@@ -66,12 +66,12 @@ private enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case .general:     return "General"
-        case .apiKeys:     return "API Keys"
-        case .modes:       return "Modes"
-        case .glossary:    return "Glossary"
-        case .history:     return "History"
-        case .permissions: return "Permissions"
+        case .general:     return "일반"
+        case .apiKeys:     return "API 키"
+        case .modes:       return "모드"
+        case .glossary:    return "용어집"
+        case .history:     return "기록"
+        case .permissions: return "권한"
         }
     }
 
@@ -132,7 +132,7 @@ struct SettingsRootView: View {
         } detail: {
             detailView
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .navigationTitle(selection?.title ?? "Settings")
+                .navigationTitle(selection?.title ?? "설정")
                 .navigationSubtitle("")
                 .toolbar {
                     ToolbarItem(placement: .navigation) { Spacer() }

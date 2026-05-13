@@ -33,30 +33,30 @@ final class MenuBarController {
 
         menu.addItem(NSMenuItem.separator())
 
-        let toggle = NSMenuItem(title: "Start / stop dictation", action: #selector(triggerToggle), keyEquivalent: "")
+        let toggle = NSMenuItem(title: "음성 입력 시작/중지", action: #selector(triggerToggle), keyEquivalent: "")
         toggle.target = self
         menu.addItem(toggle)
 
-        let modeMenu = NSMenu(title: "Run next with mode")
+        let modeMenu = NSMenu(title: "입력 모드")
         for mode in ModeManager.shared.modes {
             let item = NSMenuItem(title: mode.name, action: #selector(setNextMode(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = mode.id
             modeMenu.addItem(item)
         }
-        let modeParent = NSMenuItem(title: "Run next with mode", action: nil, keyEquivalent: "")
+        let modeParent = NSMenuItem(title: "입력 모드", action: nil, keyEquivalent: "")
         modeParent.submenu = modeMenu
         menu.addItem(modeParent)
 
         menu.addItem(NSMenuItem.separator())
 
-        let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        let settings = NSMenuItem(title: "설정…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
 
         menu.addItem(NSMenuItem.separator())
 
-        let quit = NSMenuItem(title: "Quit K-Whisper", action: #selector(quit), keyEquivalent: "q")
+        let quit = NSMenuItem(title: "K-Whisper 종료", action: #selector(quit), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
 

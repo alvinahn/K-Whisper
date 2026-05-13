@@ -7,8 +7,8 @@ struct GeneralSettingsView: View {
 
     var body: some View {
         Form {
-            Section("Speech-to-text") {
-                Picker("STT provider", selection: $settings.sttProvider) {
+            Section("음성 인식") {
+                Picker("음성 인식 서비스", selection: $settings.sttProvider) {
                     ForEach(STTProviderKind.allCases) { p in
                         Text(p.displayName).tag(p)
                     }
@@ -16,55 +16,55 @@ struct GeneralSettingsView: View {
                 Text(sttHint)
                     .font(.caption).foregroundStyle(.secondary)
 
-                Picker("Audio language", selection: $settings.audioLanguage) {
+                Picker("음성 언어", selection: $settings.audioLanguage) {
                     ForEach(AudioLanguage.allCases) { l in
                         Text(l.displayName).tag(l)
                     }
                 }
-                Text("Forcing the language (vs auto-detect) reduces Korean transcription errors when audio is mostly Korean.")
+                Text("대부분 한국어로 말한다면 언어를 고정하는 편이 한국어 인식 오류를 줄입니다.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
-            Section("Default mode") {
-                Picker("When you trigger dictation", selection: $settings.defaultModeId) {
+            Section("기본 입력 모드") {
+                Picker("음성 입력 시", selection: $settings.defaultModeId) {
                     ForEach(modes.modes) { mode in
                         Text(mode.name).tag(mode.id)
                     }
                 }
             }
 
-            Section("Output") {
-                Picker("Insert text via", selection: $settings.outputMethod) {
+            Section("출력") {
+                Picker("텍스트 입력 방식", selection: $settings.outputMethod) {
                     ForEach(OutputMethod.allCases) { m in
                         Text(m.displayName).tag(m)
                     }
                 }
-                Toggle("Play start/stop sounds", isOn: $settings.playSounds)
+                Toggle("시작/종료 소리 재생", isOn: $settings.playSounds)
             }
 
-            Section("Triggers") {
-                Toggle("Enable push-to-talk (hold a key to dictate)", isOn: $settings.holdKeyEnabled)
+            Section("단축키") {
+                Toggle("누르고 말하기 사용", isOn: $settings.holdKeyEnabled)
                 if settings.holdKeyEnabled {
-                    Picker("Hold key", selection: $settings.holdKey) {
+                    Picker("누르고 말하기 키", selection: $settings.holdKey) {
                         ForEach(HoldKey.allCases) { k in
                             Text(k.displayName).tag(k)
                         }
                     }
-                    Text("Right ⌘ doesn't require Input Monitoring permission. Fn does.")
+                    Text("오른쪽 ⌘는 입력 모니터링 권한이 필요 없습니다. Fn은 필요합니다.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 HStack {
-                    Text("Toggle hotkey")
+                    Text("토글 단축키")
                     Spacer()
                     Text(hotkeyDisplay).foregroundStyle(.secondary).font(.system(.body, design: .monospaced))
                 }
-                Text("Default ⌥⌘Space. Customize in code (Settings.swift) for now — full hotkey recorder UI coming soon.")
+                Text("기본값은 ⌥⌘Space입니다. 단축키 편집 UI는 추후 추가 예정입니다.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section("Korean") {
-                Picker("Default tone for translation", selection: $settings.koreanTone) {
+            Section("한국어") {
+                Picker("번역 기본 말투", selection: $settings.koreanTone) {
                     ForEach(KoreanTone.allCases) { t in
                         Text(t.displayName).tag(t)
                     }
@@ -76,9 +76,12 @@ struct GeneralSettingsView: View {
 
     private var sttHint: String {
         switch settings.sttProvider {
-        case .groq:    return "Uses your Groq key. Whisper Large-v3-Turbo at ~200–500ms. Best Korean accuracy. ~$0.04/hr — ~10× cheaper than OpenAI Whisper. Free tier available."
-        case .whisper: return "Uses your OpenAI key. whisper-1 (older v2-era model). $0.006/min. Decent English, weaker Korean than Groq."
-        case .gemini:  return "Uses your Google (Gemini) key. Free tier covers personal use. Decent Korean."
+        case .groq:    return "Groq 키를 사용합니다. Whisper Large-v3-Turbo라 빠르고 한국어 정확도/속도 균형이 좋습니다."
+        case .groqV3:  return "Groq 키를 사용합니다. Whisper Large-v3 전체 모델이라 조금 더 정확하지만 Turbo보다 느립니다."
+        case .openAITranscribe: return "OpenAI 키를 사용합니다. GPT-4o Transcribe 모델입니다."
+        case .openAIMiniTranscribe: return "OpenAI 키를 사용합니다. GPT-4o Mini Transcribe 모델입니다."
+        case .whisper: return "OpenAI 키를 사용합니다. whisper-1은 영어는 무난하지만 한국어는 Groq보다 약합니다."
+        case .gemini:  return "Google Gemini 키를 사용합니다. 개인 사용량은 무료 티어로 충분한 편입니다."
         }
     }
 
@@ -96,10 +99,10 @@ struct GeneralSettingsView: View {
 
     private func keyName(for kc: Int) -> String {
         switch kc {
-        case kVK_Space: return "Space"
-        case kVK_Return: return "Return"
+        case kVK_Space: return "스페이스"
+        case kVK_Return: return "리턴"
         case kVK_Escape: return "Esc"
-        default: return "key\(kc)"
+        default: return "키\(kc)"
         }
     }
 }

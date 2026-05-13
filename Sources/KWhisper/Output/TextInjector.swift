@@ -11,7 +11,7 @@ enum TextInjector {
         var errorDescription: String? {
             switch self {
             case .accessibilityNotGranted:
-                return "Accessibility permission missing — paste can't reach the focused app"
+                return "접근성 권한이 없어 텍스트를 입력하지 못했습니다."
             }
         }
     }

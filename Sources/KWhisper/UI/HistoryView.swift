@@ -8,7 +8,8 @@ struct HistoryView: View {
 
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let f = RelativeDateTimeFormatter()
-        f.unitsStyle = .abbreviated   // "10m ago" / "1h ago" / "2d ago"
+        f.locale = Locale(identifier: "ko_KR")
+        f.unitsStyle = .abbreviated
         return f
     }()
 
@@ -25,9 +26,9 @@ struct HistoryView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                TextField("Search…", text: $query)
+                TextField("검색…", text: $query)
                     .textFieldStyle(.roundedBorder)
-                Button(role: .destructive) { store.clear() } label: { Text("Clear all") }
+                Button(role: .destructive) { store.clear() } label: { Text("전체 삭제") }
                     .disabled(store.entries.isEmpty)
             }
             .padding(.horizontal, 16)
@@ -61,7 +62,7 @@ struct HistoryView: View {
                     if let sel = selection, let entry = store.entries.first(where: { $0.id == sel }) {
                         detail(entry)
                     } else {
-                        Text("Select an entry")
+                        Text("기록을 선택하세요")
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
@@ -78,7 +79,7 @@ struct HistoryView: View {
                 Text(entry.timestamp.formatted(date: .abbreviated, time: .standard))
                     .font(.caption).foregroundStyle(.secondary)
 
-                GroupBox("Output (\(entry.modeName))") {
+                GroupBox("출력 (\(entry.modeName))") {
                     HStack(alignment: .top) {
                         Text(entry.processedText)
                             .textSelection(.enabled)
@@ -93,7 +94,7 @@ struct HistoryView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                GroupBox("Raw transcript") {
+                GroupBox("원본 인식 결과") {
                     Text(entry.rawTranscript)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
