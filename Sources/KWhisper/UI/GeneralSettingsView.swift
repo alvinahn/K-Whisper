@@ -78,6 +78,8 @@ struct GeneralSettingsView: View {
         switch settings.sttProvider {
         case .groq:    return "Groq 키를 사용합니다. Whisper Large-v3-Turbo라 빠르고 한국어 정확도/속도 균형이 좋습니다."
         case .groqV3:  return "Groq 키를 사용합니다. Whisper Large-v3 전체 모델이라 조금 더 정확하지만 Turbo보다 느립니다."
+        case .openAITranscribe: return "OpenAI 키를 사용합니다. GPT-4o Transcribe 모델입니다."
+        case .openAIMiniTranscribe: return "OpenAI 키를 사용합니다. GPT-4o Mini Transcribe 모델입니다."
         case .whisper: return "OpenAI 키를 사용합니다. whisper-1은 영어는 무난하지만 한국어는 Groq보다 약합니다."
         case .gemini:  return "Google Gemini 키를 사용합니다. 개인 사용량은 무료 티어로 충분한 편입니다."
         }

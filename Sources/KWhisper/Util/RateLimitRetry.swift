@@ -55,7 +55,7 @@ enum RateLimitRetry {
         }
 
         Log.app.info("rate limited — retrying once in \(String(format: "%.1f", wait))s")
-        try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
+        try await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
 
         // Single retry attempt. Whatever we get back is final — don't retry again.
         return try await call()

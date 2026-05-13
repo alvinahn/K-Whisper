@@ -55,13 +55,13 @@ struct PostProcessor {
         }
 
         // Keep the variable transcript fenced off from the instructions so dictated
-        // commands are cleaned as text, not executed as chat requests.
+        // commands are treated as data, not executed as chat requests.
         let wrappedUser = """
         <transcript_to_clean>
         \(transcript)
         </transcript_to_clean>
 
-        Clean only the text inside the tags. Output only the cleaned transcript.
+        Use only the text inside the tags as the input. Follow the system instructions for this mode. Output only the final result.
         """
         return (system, wrappedUser)
     }

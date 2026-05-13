@@ -66,13 +66,23 @@ final class GlossaryStore: ObservableObject {
         parsedEntries().map { $0.canonical }
     }
 
-    /// Whisper API `prompt` param. Keep this short: canonical-only glossary entries
-    /// are hints, while alias mappings remain deterministic post-STT substitutions.
-    func whisperBiasPrompt() -> String? {
+    /// Whisper API `prompt` param. Keep this short: dialect/style hints nudge the
+    /// STT model toward spoken Korean, while canonical-only glossary entries are
+    /// hints and alias mappings remain deterministic post-STT substitutions.
+    func whisperBiasPrompt(language: String? = nil) -> String? {
+        var parts: [String] = []
+
+        if language != "en" {
+            parts.append("한국어 구어체와 경상도 사투리가 포함될 수 있습니다. 실제 들리는 말투를 그대로 적어주세요. 예: 밥 문나, 뭐하노, 누구고, 맞나, 아이다, 한 것 같애.")
+        }
+
         let canonicals = canonicalTerms()
-        guard !canonicals.isEmpty else { return nil }
-        let joined = canonicals.prefix(30).joined(separator: ", ")
-        return "Known names and terms that may appear: \(joined)."
+        if !canonicals.isEmpty {
+            let joined = canonicals.prefix(30).joined(separator: ", ")
+            parts.append("자주 나오는 이름/용어: \(joined).")
+        }
+
+        return parts.isEmpty ? nil : parts.joined(separator: "\n")
     }
 
     /// For LLM post-processing: full list of canonical terms.

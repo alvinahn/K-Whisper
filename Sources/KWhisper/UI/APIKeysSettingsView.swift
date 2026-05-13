@@ -38,7 +38,7 @@ struct APIKeysSettingsView: View {
                     save: { try keychain.set(.openai, value: openaiKey) },
                     clear: { keychain.clear(.openai); openaiKey = "" }
                 )
-                Text("용도: whisper-1 음성 인식과 GPT 기반 AI 처리.")
+                Text("용도: GPT-4o Transcribe, GPT-4o Mini Transcribe, whisper-1 음성 인식과 GPT 기반 AI 처리.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 

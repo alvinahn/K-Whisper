@@ -23,7 +23,7 @@ final class ModeManager: ObservableObject {
     }
 
     func upsert(_ mode: Mode) {
-        let mode = normalized(mode)
+        let mode = mode.isBuiltIn ? normalized(mode) : mode
         if let idx = modes.firstIndex(where: { $0.id == mode.id }) {
             modes[idx] = mode
         } else {
@@ -74,7 +74,7 @@ final class ModeManager: ObservableObject {
             merged.maxTokens = saved.maxTokens
             return normalized(merged)
         }
-        modes = builtIns + savedUserModes.map(normalized)
+        modes = builtIns + savedUserModes
         persist()
     }
 

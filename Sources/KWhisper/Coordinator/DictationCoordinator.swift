@@ -67,12 +67,20 @@ final class DictationCoordinator: ObservableObject {
     }
 
     /// Constructs the STT provider configured in Settings, falling back to whichever provider
-    /// has a key available if the configured one is missing. Order: configured → groq → whisper → gemini.
+    /// has a key available if the configured one is missing.
     private func makeSTT() throws -> STTProvider {
         let configured = settings.sttProvider
         if let provider = tryProvider(configured) { return provider }
 
-        for fallback in [STTProviderKind.groq, .whisper, .gemini] where fallback != configured {
+        let fallbacks: [STTProviderKind] = [
+            .groq,
+            .groqV3,
+            .openAITranscribe,
+            .openAIMiniTranscribe,
+            .whisper,
+            .gemini
+        ]
+        for fallback in fallbacks where fallback != configured {
             if let provider = tryProvider(fallback) {
                 Log.stt.info("STT auto-fallback: \(configured.rawValue) key missing → using \(fallback.rawValue)")
                 return provider
@@ -82,7 +90,8 @@ final class DictationCoordinator: ObservableObject {
         // Nothing configured at all.
         switch configured {
         case .groq, .groqV3: throw GroqWhisperSTT.GroqSTTError.missingKey
-        case .whisper:       throw WhisperClient.WhisperError.missingKey
+        case .openAITranscribe, .openAIMiniTranscribe, .whisper:
+            throw WhisperClient.WhisperError.missingKey
         case .gemini:        throw GeminiSTT.GeminiSTTError.missingKey
         }
     }
@@ -95,6 +104,12 @@ final class DictationCoordinator: ObservableObject {
         case .groqV3:
             guard let key = keychain.get(.groq) else { return nil }
             return GroqWhisperSTT(apiKey: key, model: "whisper-large-v3")
+        case .openAITranscribe:
+            guard let key = keychain.get(.openai) else { return nil }
+            return WhisperClient(apiKey: key, model: "gpt-4o-transcribe")
+        case .openAIMiniTranscribe:
+            guard let key = keychain.get(.openai) else { return nil }
+            return WhisperClient(apiKey: key, model: "gpt-4o-mini-transcribe")
         case .whisper:
             guard let key = keychain.get(.openai) else { return nil }
             return WhisperClient(apiKey: key)
@@ -270,7 +285,7 @@ final class DictationCoordinator: ObservableObject {
         do {
             transcript = try await stt.transcribe(
                 wav: wav,
-                biasPrompt: glossary.whisperBiasPrompt(),
+                biasPrompt: glossary.whisperBiasPrompt(language: langHint),
                 language: langHint
             )
         } catch {
