@@ -1,22 +1,24 @@
 import Foundation
 
 enum STTProviderKind: String, CaseIterable, Codable, Identifiable {
-    case groq           // Groq-hosted Whisper Large-v3-Turbo (recommended)
+    case groq           // Groq-hosted Whisper Large-v3-Turbo (distilled, fastest, recommended)
+    case groqV3         // Groq-hosted Whisper Large-v3 (full — slightly better Korean ?/intonation)
     case whisper        // OpenAI Whisper API (whisper-1, older v2-era)
     case gemini         // Google Gemini multimodal
     var id: String { rawValue }
     var displayName: String {
         switch self {
-        case .groq:    return "Groq Whisper Large-v3-Turbo (recommended)"
+        case .groq:    return "Groq Whisper Large-v3-Turbo (추천)"
+        case .groqV3:  return "Groq Whisper Large-v3 (정확도 우선)"
         case .whisper: return "OpenAI Whisper (whisper-1)"
-        case .gemini:  return "Google Gemini (audio)"
+        case .gemini:  return "Google Gemini"
         }
     }
     var requiredKey: APIKeyKind {
         switch self {
-        case .groq:    return .groq
-        case .whisper: return .openai
-        case .gemini:  return .google
+        case .groq, .groqV3: return .groq
+        case .whisper:       return .openai
+        case .gemini:        return .google
         }
     }
 }

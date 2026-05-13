@@ -66,12 +66,13 @@ final class GlossaryStore: ObservableObject {
         parsedEntries().map { $0.canonical }
     }
 
-    /// Whisper API `prompt` param is limited to ~224 tokens; keep it short.
+    /// Whisper API `prompt` param. Keep this short: canonical-only glossary entries
+    /// are hints, while alias mappings remain deterministic post-STT substitutions.
     func whisperBiasPrompt() -> String? {
         let canonicals = canonicalTerms()
         guard !canonicals.isEmpty else { return nil }
-        let joined = canonicals.prefix(50).joined(separator: ", ")
-        return "Glossary: \(joined)."
+        let joined = canonicals.prefix(30).joined(separator: ", ")
+        return "Known names and terms that may appear: \(joined)."
     }
 
     /// For LLM post-processing: full list of canonical terms.

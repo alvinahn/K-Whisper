@@ -10,10 +10,10 @@ struct GeminiSTT: STTProvider {
         case empty
         var errorDescription: String? {
             switch self {
-            case .missingKey: return "Google (Gemini) API key is missing. Add it in Settings → API Keys."
-            case .http(let c, let b): return "Gemini STT — " + APIErrorParser.format(status: c, body: b)
-            case .decode(let m): return "Gemini STT decode failed: \(m)"
-            case .empty: return "Gemini STT returned no text."
+            case .missingKey: return "Google (Gemini) API 키가 없습니다. 설정 → API 키에서 추가하세요."
+            case .http(let c, let b): return "Gemini 음성 인식 — " + APIErrorParser.format(status: c, body: b)
+            case .decode(let m): return "Gemini 음성 인식 응답 해석 실패: \(m)"
+            case .empty: return "Gemini 음성 인식 결과가 비어 있습니다."
             }
         }
     }

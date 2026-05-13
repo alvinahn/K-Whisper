@@ -12,57 +12,57 @@ struct APIKeysSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Text("Keys are stored at \(SecretsStore.shared.storagePath) with owner-only (0600) permissions. They never leave this Mac except in API requests to the respective providers.")
+                Text("API 키는 \(SecretsStore.shared.storagePath)에 저장됩니다. 이 Mac 밖으로는 각 서비스 요청에만 전송됩니다.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
             }
 
-            Section("Groq (recommended for STT)") {
+            Section("Groq (음성 인식 추천)") {
                 keyField(
-                    title: "API key (gsk_...)",
+                    title: "API 키 (gsk_...)",
                     text: $groqKey,
                     isSet: keychain.hasGroq,
                     save: { try keychain.set(.groq, value: groqKey) },
                     clear: { keychain.clear(.groq); groqKey = "" }
                 )
-                Text("Used for: Whisper Large-v3-Turbo STT — fastest cloud option, ~$0.04/hr (~10× cheaper than OpenAI Whisper). Get a free key at console.groq.com/keys.")
+                Text("용도: Whisper Large-v3-Turbo 음성 인식. 클라우드 옵션 중 가장 빠른 편입니다.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
             Section("OpenAI") {
                 keyField(
-                    title: "API key (sk-...)",
+                    title: "API 키 (sk-...)",
                     text: $openaiKey,
                     isSet: keychain.hasOpenAI,
                     save: { try keychain.set(.openai, value: openaiKey) },
                     clear: { keychain.clear(.openai); openaiKey = "" }
                 )
-                Text("Used for: whisper-1 STT (older, slower) + GPT post-processing modes.")
+                Text("용도: whisper-1 음성 인식과 GPT 기반 AI 처리.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
             Section("Anthropic (Claude)") {
                 keyField(
-                    title: "API key (sk-ant-...)",
+                    title: "API 키 (sk-ant-...)",
                     text: $anthropicKey,
                     isSet: keychain.hasAnthropic,
                     save: { try keychain.set(.anthropic, value: anthropicKey) },
                     clear: { keychain.clear(.anthropic); anthropicKey = "" }
                 )
-                Text("Used for: Claude post-processing modes (e.g. Email, KO↔EN translation).")
+                Text("용도: Claude 기반 AI 처리.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
             Section("Google (Gemini)") {
                 keyField(
-                    title: "API key",
+                    title: "API 키",
                     text: $googleKey,
                     isSet: keychain.hasGoogle,
                     save: { try keychain.set(.google, value: googleKey) },
                     clear: { keychain.clear(.google); googleKey = "" }
                 )
-                Text("Used for: Gemini post-processing modes (default cleanup, code comment).")
+                Text("용도: Gemini 음성 인식과 AI 처리.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -87,16 +87,16 @@ struct APIKeysSettingsView: View {
             if isSet {
                 Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
             }
-            Button("Save") {
+            Button("저장") {
                 do {
                     try save()
-                    statusMessage = "Saved."
+                    statusMessage = "저장했습니다."
                 } catch {
-                    statusMessage = "Save failed: \(error.localizedDescription)"
+                    statusMessage = "저장 실패: \(error.localizedDescription)"
                 }
             }
             .disabled(text.wrappedValue.isEmpty)
-            Button("Clear") { clear(); statusMessage = "Cleared." }
+            Button("삭제") { clear(); statusMessage = "삭제했습니다." }
                 .disabled(!isSet)
         }
     }

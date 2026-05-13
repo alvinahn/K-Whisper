@@ -64,10 +64,10 @@ struct HUDView: View {
     private var title: String {
         switch model.phase {
         case .idle: return "K-Whisper"
-        case .recording: return "Listening… \(formattedElapsed)"
-        case .transcribing: return "Transcribing…"
-        case .processing(let m): return "Processing (\(m))…"
-        case .delivered: return "✓ Inserted"
+        case .recording: return "듣는 중… \(formattedElapsed)"
+        case .transcribing: return "인식 중…"
+        case .processing(let m): return "처리 중 (\(m))…"
+        case .delivered: return "✓ 입력 완료"
         case .error(let m, _): return m
         }
     }
@@ -76,16 +76,16 @@ struct HUDView: View {
         switch model.phase {
         case .recording:
             let exitHint: String = (model.recordingTrigger == .hold)
-                ? "Release · Esc to stop"
-                : "Tap or Esc to stop"
+                ? "키를 놓으면 종료 · Esc 취소"
+                : "다시 누르면 종료 · Esc 취소"
             return model.level > 0.02
                 ? "\(model.modeName) · \(exitHint)"
-                : "\(model.modeName) · (no signal — speak up?)"
+                : "\(model.modeName) · 신호 약함"
         case .processing:
             let langPart = model.language.isEmpty ? model.modeName : "\(model.modeName) · \(model.language.uppercased())"
-            return "\(langPart) · Esc to cancel"
-        case .transcribing: return "\(model.modeName) · Esc to cancel"
-        case .error(_, let hint): return hint ?? "See Console.app · filter app.kwhisper"
+            return "\(langPart) · Esc로 취소"
+        case .transcribing: return "\(model.modeName) · Esc로 취소"
+        case .error(_, let hint): return hint ?? "Console.app에서 로그 확인"
         default: return model.modeName
         }
     }

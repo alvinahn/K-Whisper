@@ -99,7 +99,7 @@ final class HUDViewModel: ObservableObject {
     }
     @Published var elapsed: TimeInterval = 0
     @Published var level: Float = 0
-    @Published var modeName: String = "Default cleanup"
+    @Published var modeName: String = "그대로 입력"
     @Published var language: String = ""
     @Published var recordingTrigger: DictationCoordinator.RecordingTrigger = .toggle
 

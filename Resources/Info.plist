@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
+    <string>ko</string>
     <key>CFBundleExecutable</key>
     <string>KWhisper</string>
     <key>CFBundleIconFile</key>
@@ -29,9 +29,9 @@
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSMicrophoneUsageDescription</key>
-    <string>K-Whisper records your voice to transcribe it into text using Whisper.</string>
+    <string>K-Whisper가 음성을 텍스트로 변환하기 위해 마이크를 사용합니다.</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>K-Whisper needs to type transcribed text into the focused application.</string>
+    <string>K-Whisper가 인식된 텍스트를 현재 선택된 앱에 입력하기 위해 필요합니다.</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
 </dict>

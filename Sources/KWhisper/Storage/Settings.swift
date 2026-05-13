@@ -7,8 +7,8 @@ enum OutputMethod: String, CaseIterable, Identifiable, Codable {
     var id: String { rawValue }
     var displayName: String {
         switch self {
-        case .clipboardPaste: return "Clipboard paste (⌘V)"
-        case .syntheticTyping: return "Synthetic typing"
+        case .clipboardPaste: return "클립보드 붙여넣기 (⌘V)"
+        case .syntheticTyping: return "직접 타이핑"
         }
     }
 }
@@ -20,9 +20,9 @@ enum KoreanTone: String, CaseIterable, Identifiable, Codable {
     var id: String { rawValue }
     var displayName: String {
         switch self {
-        case .banmal: return "반말 (casual)"
-        case .jondaetmal: return "존댓말 (polite)"
-        case .auto: return "Auto-detect from context"
+        case .banmal: return "반말"
+        case .jondaetmal: return "존댓말"
+        case .auto: return "문맥에 맞추기"
         }
     }
 }
@@ -34,9 +34,9 @@ enum AudioLanguage: String, CaseIterable, Identifiable, Codable {
     var id: String { rawValue }
     var displayName: String {
         switch self {
-        case .auto: return "Auto-detect"
-        case .ko:   return "Korean (한국어)"
-        case .en:   return "English"
+        case .auto: return "자동 감지"
+        case .ko:   return "한국어"
+        case .en:   return "영어"
         }
     }
     /// ISO-639-1 code Whisper expects, or nil for auto-detect.
@@ -101,11 +101,28 @@ final class Settings: ObservableObject {
             // v2: default hold key → right Option (Superwhisper-style).
             d.set(HoldKey.rightOption.rawValue, forKey: "holdKey")
         }
-        if migrationVersion < 2 {
-            d.set(2, forKey: "settingsMigrationVersion")
+        if migrationVersion < 3 {
+            // v3: Verbatim becomes the new default mode (Superwhisper-style raw STT
+            // passthrough). The old `default-cleanup` and `raw` mode IDs were renamed
+            // — migrate any persisted choice to its new equivalent. Users who had the
+            // old `default-cleanup` default get bumped to `verbatim`; if they actually
+            // want LLM cleanup back, they can pick "Cleanup" in Settings → General.
+            let oldMode = d.string(forKey: "defaultModeId")
+            switch oldMode {
+            case "default-cleanup", "raw", nil:
+                d.set("verbatim", forKey: "defaultModeId")
+            default:
+                break  // user picked something specific (email/slack/translation/custom) — leave alone
+            }
+        }
+        if migrationVersion < 3 {
+            d.set(3, forKey: "settingsMigrationVersion")
+        }
+        if ["default-cleanup", "raw"].contains(d.string(forKey: "defaultModeId") ?? "") {
+            d.set("verbatim", forKey: "defaultModeId")
         }
 
-        self.defaultModeId = d.string(forKey: "defaultModeId") ?? "default-cleanup"
+        self.defaultModeId = d.string(forKey: "defaultModeId") ?? "verbatim"
         self.outputMethod = OutputMethod(rawValue: d.string(forKey: "outputMethod") ?? "")
             ?? .clipboardPaste
         self.koreanTone = KoreanTone(rawValue: d.string(forKey: "koreanTone") ?? "")

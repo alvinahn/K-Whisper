@@ -16,7 +16,7 @@ struct ModesSettingsView: View {
                             Text(mode.name)
                                 .lineLimit(1)
                             if mode.isBuiltIn {
-                                Text("built-in")
+                                Text("기본")
                                     .font(.caption2)
                                     .padding(.horizontal, 6).padding(.vertical, 2)
                                     .background(.gray.opacity(0.2))
@@ -34,11 +34,11 @@ struct ModesSettingsView: View {
                 HStack(spacing: 4) {
                     Button { addNew() } label: { Image(systemName: "plus") }
                         .buttonStyle(.borderless)
-                        .help("Add a new mode")
+                        .help("새 모드 추가")
                     Button { delete() } label: { Image(systemName: "minus") }
                         .buttonStyle(.borderless)
                         .disabled(!canDelete)
-                        .help("Delete the selected mode")
+                        .help("선택한 모드 삭제")
                     Spacer()
                 }
                 .padding(.horizontal, 8)
@@ -60,7 +60,7 @@ struct ModesSettingsView: View {
                     // frozen on the previously selected mode.
                     .id(draft.id)
                 } else {
-                    Text("Select a mode to edit, or click + to create a new one.")
+                    Text("편집할 모드를 선택하거나 + 버튼으로 새 모드를 만드세요.")
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -80,7 +80,7 @@ struct ModesSettingsView: View {
     private func addNew() {
         let newMode = Mode(
             id: Mode.makeUserId(),
-            name: "New mode",
+            name: "새 모드",
             systemPrompt: "Rewrite the transcript clearly. Match the language of the input. Output ONLY the result.",
             provider: .gemini,
             model: DefaultModels.geminiFlash,
@@ -103,40 +103,52 @@ private struct ModeEditor: View {
 
     var body: some View {
         Form {
-            Section("Identity") {
-                TextField("Name", text: $mode.name).disabled(mode.isBuiltIn && mode.id != "")
+            Section("기본 정보") {
+                TextField("이름", text: $mode.name).disabled(mode.isBuiltIn && mode.id != "")
                 Text("ID: \(mode.id)").font(.caption).foregroundStyle(.secondary)
             }
-            Section("Provider") {
-                Picker("Provider", selection: $mode.provider) {
+            Section("AI 서비스") {
+                Picker("서비스", selection: $mode.provider) {
                     ForEach(LLMProviderKind.allCases) { p in
                         Text(p.displayName).tag(p)
                     }
                 }
                 if mode.provider != .none {
-                    TextField("Model", text: $mode.model)
+                    TextField("모델", text: $mode.model)
                     HStack {
-                        Text("Temperature")
+                        Text("온도")
                         Slider(value: $mode.temperature, in: 0...1, step: 0.05)
                         Text(String(format: "%.2f", mode.temperature))
                             .font(.system(.caption, design: .monospaced))
                             .frame(width: 40, alignment: .trailing)
                     }
-                    Stepper("Max tokens: \(mode.maxTokens)", value: $mode.maxTokens, in: 64...4096, step: 64)
+                    Stepper("최대 토큰: \(mode.maxTokens)", value: $mode.maxTokens, in: 64...4096, step: 64)
                 }
             }
-            Section("System prompt") {
+            Section("시스템 프롬프트") {
                 TextEditor(text: $mode.systemPrompt)
                     .font(.system(.body, design: .monospaced))
                     .frame(minHeight: 140)
-                Text("Use {KOREAN_TONE} as a placeholder for the user's default tone setting.")
+                Text("{KOREAN_TONE}을 사용하면 일반 설정의 한국어 말투 값으로 치환됩니다.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section {
-                Button("Save changes") { onSave(mode) }
+                Button("변경사항 저장") { onSave(mode) }
                     .keyboardShortcut("s", modifiers: .command)
             }
         }
         .formStyle(.grouped)
+        .onChange(of: mode.provider) { _, provider in
+            mode.model = DefaultModels.defaultModel(for: provider)
+            if provider == .none {
+                mode.maxTokens = 0
+            } else if mode.maxTokens == 0 {
+                mode.maxTokens = 512
+            }
+            onSave(mode)
+        }
+        .onChange(of: mode.model) { _, _ in onSave(mode) }
+        .onChange(of: mode.temperature) { _, _ in onSave(mode) }
+        .onChange(of: mode.maxTokens) { _, _ in onSave(mode) }
     }
 }

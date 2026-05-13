@@ -41,7 +41,7 @@ final class DictationCoordinator: ObservableObject {
         case offline
         var errorDescription: String? {
             switch self {
-            case .offline: return "No internet connection"
+            case .offline: return "인터넷 연결 없음"
             }
         }
     }
@@ -81,9 +81,9 @@ final class DictationCoordinator: ObservableObject {
 
         // Nothing configured at all.
         switch configured {
-        case .groq:    throw GroqWhisperSTT.GroqSTTError.missingKey
-        case .whisper: throw WhisperClient.WhisperError.missingKey
-        case .gemini:  throw GeminiSTT.GeminiSTTError.missingKey
+        case .groq, .groqV3: throw GroqWhisperSTT.GroqSTTError.missingKey
+        case .whisper:       throw WhisperClient.WhisperError.missingKey
+        case .gemini:        throw GeminiSTT.GeminiSTTError.missingKey
         }
     }
 
@@ -92,6 +92,9 @@ final class DictationCoordinator: ObservableObject {
         case .groq:
             guard let key = keychain.get(.groq) else { return nil }
             return GroqWhisperSTT(apiKey: key)
+        case .groqV3:
+            guard let key = keychain.get(.groq) else { return nil }
+            return GroqWhisperSTT(apiKey: key, model: "whisper-large-v3")
         case .whisper:
             guard let key = keychain.get(.openai) else { return nil }
             return WhisperClient(apiKey: key)
@@ -106,19 +109,19 @@ final class DictationCoordinator: ObservableObject {
         if let e = error as? TextInjector.DeliveryError {
             switch e {
             case .accessibilityNotGranted:
-                return "Settings → Permissions → Reset Accessibility"
+                return "설정 > 권한 > 접근성 다시 허용"
             }
         }
         return nil
     }
 
-    /// Pulls the HTTP status code out of any of our provider error types so we can
-    /// surface a contextual hint in the HUD.
-    private static func extractHTTPStatus(from error: Error) -> Int? {
-        if let e = error as? WhisperClient.WhisperError, case .http(let c, _) = e { return c }
-        if let e = error as? GroqWhisperSTT.GroqSTTError, case .http(let c, _) = e { return c }
-        if let e = error as? GeminiSTT.GeminiSTTError, case .http(let c, _) = e { return c }
-        if let e = error as? LLMError, case .http(let c, _) = e { return c }
+    /// Pulls HTTP error details out of provider errors so the HUD can show
+    /// context-aware hints, especially Groq's TPM vs TPD rate-limit distinction.
+    private static func extractHTTPError(from error: Error) -> (status: Int, body: String)? {
+        if let e = error as? WhisperClient.WhisperError, case .http(let c, let b) = e { return (c, b) }
+        if let e = error as? GroqWhisperSTT.GroqSTTError, case .http(let c, let b) = e { return (c, b) }
+        if let e = error as? GeminiSTT.GeminiSTTError, case .http(let c, let b) = e { return (c, b) }
+        if let e = error as? LLMError, case .http(let c, let b) = e { return (c, b) }
         return nil
     }
 
@@ -126,7 +129,7 @@ final class DictationCoordinator: ObservableObject {
     func selectNextMode(_ modeId: String) {
         nextModeId = modeId
         if let m = modes.mode(id: modeId) {
-            hud.model.modeName = "Next: " + m.name
+            hud.model.modeName = "입력 모드: " + m.name
             hud.show()
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
                 guard let self else { return }
@@ -241,6 +244,7 @@ final class DictationCoordinator: ObservableObject {
     }
 
     private func runPipeline(wav: Data, modeId: String) async {
+        let pipelineStarted = Date()
         let mode = modes.mode(id: modeId) ?? DefaultModes.all[0]
 
         // Fail fast if NWPathMonitor says we're offline — avoids a 12s HTTP wait.
@@ -262,6 +266,7 @@ final class DictationCoordinator: ObservableObject {
         let langHint = settings.audioLanguage.whisperCode
         Log.stt.info("→ STT (\(self.settings.sttProvider.rawValue)): uploading \(wav.count) bytes lang=\(langHint ?? "auto")")
         let transcript: TranscriptionResult
+        let sttStarted = Date()
         do {
             transcript = try await stt.transcribe(
                 wav: wav,
@@ -278,7 +283,8 @@ final class DictationCoordinator: ObservableObject {
             return
         }
 
-        Log.stt.info("← STT: lang=\(transcript.language) dur=\(transcript.durationMs)ms text=\"\(transcript.text)\"")
+        let sttWallMs = Self.elapsedMs(since: sttStarted)
+        Log.stt.info("← STT: lang=\(transcript.language) audioDur=\(transcript.durationMs)ms wall=\(sttWallMs)ms text=\"\(transcript.text)\"")
         hud.model.language = transcript.language
 
         // Step 1.5: deterministic glossary-alias substitution. STT mishearings of
@@ -299,10 +305,11 @@ final class DictationCoordinator: ObservableObject {
         )
 
         let llmOutput: String
+        let llmStarted = Date()
         do {
             Log.llm.info("→ Post-process via \(mode.provider.rawValue) (\(mode.model))")
             llmOutput = try await processor.run(transcript: correctedText)
-            Log.llm.info("← Post-process out: \"\(llmOutput)\"")
+            Log.llm.info("← Post-process wall=\(Self.elapsedMs(since: llmStarted))ms out=\"\(llmOutput)\"")
         } catch {
             if Self.isUserCancel(error) {
                 Log.llm.info("Post-process cancelled by user")
@@ -315,11 +322,12 @@ final class DictationCoordinator: ObservableObject {
 
         // Step 2.5: deterministic punctuation restoration. Llama 70B occasionally
         // strips terminal `?`/`.`/`!` despite the explicit preserve rule. Restore
-        // any that went missing, scoped to the conservative default-cleanup mode
-        // where the LLM is supposed to be near-passthrough. Other modes (Email,
-        // Slack, translation) intentionally rewrite, so we leave them alone.
+        // any that went missing, scoped to the conservative `cleanup` mode where the
+        // LLM is supposed to be near-passthrough. Other modes (Email, Slack,
+        // translation) intentionally rewrite, so we leave them alone. Verbatim mode
+        // skips the LLM entirely so there's nothing to restore.
         let final: String
-        if mode.id == "default-cleanup" {
+        if mode.id == "cleanup" {
             let restored = PunctuationRestorer.restore(input: correctedText, output: llmOutput)
             if restored != llmOutput {
                 Log.llm.info("punctuation restored: \"\(llmOutput)\" → \"\(restored)\"")
@@ -332,7 +340,7 @@ final class DictationCoordinator: ObservableObject {
         guard !final.isEmpty else {
             Log.app.error("Pipeline produced empty text — nothing to paste")
             failPipeline(with: NSError(domain: "K-Whisper", code: 1, userInfo: [
-                NSLocalizedDescriptionKey: "Empty result — nothing to paste."
+                NSLocalizedDescriptionKey: "결과가 비어 있어 붙여넣을 내용이 없습니다."
             ]))
             return
         }
@@ -340,6 +348,7 @@ final class DictationCoordinator: ObservableObject {
         // Step 3: deliver. If Accessibility isn't granted the keystrokes are silently
         // swallowed — we MUST surface that as an error rather than show a fake "✓ Inserted".
         Log.inject.info("→ Delivering \(final.count) chars via \(self.settings.outputMethod.rawValue)")
+        let deliverStarted = Date()
         do {
             try TextInjector.deliver(final)
         } catch {
@@ -347,6 +356,7 @@ final class DictationCoordinator: ObservableObject {
             failPipeline(with: error)
             return
         }
+        Log.inject.info("← Deliver wall=\(Self.elapsedMs(since: deliverStarted))ms")
 
         // Step 4: history + brief success indicator.
         history.add(HistoryEntry(
@@ -359,6 +369,7 @@ final class DictationCoordinator: ObservableObject {
         ))
 
         hud.model.phase = .delivered
+        Log.app.info("✓ pipeline complete total=\(Self.elapsedMs(since: pipelineStarted))ms mode=\(mode.name)")
         pipelineTask = nil
         hotkey.setEscapeCaptureActive(false)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
@@ -378,6 +389,10 @@ final class DictationCoordinator: ObservableObject {
         if error is CancellationError { return true }
         if let url = error as? URLError, url.code == .cancelled { return true }
         return false
+    }
+
+    private static func elapsedMs(since start: Date) -> Int {
+        Int((Date().timeIntervalSince(start) * 1000).rounded())
     }
 
     /// Unified failure path used by every catch in `runPipeline`: hides the spinner,
@@ -400,14 +415,14 @@ final class DictationCoordinator: ObservableObject {
             title = mapped.title
             hint = mapped.hint
         } else if case PipelineError.offline = error {
-            title = "No internet connection"
-            hint = "Check your Wi-Fi · Esc to dismiss"
+            title = "인터넷 연결 없음"
+            hint = "Wi-Fi를 확인하세요 · Esc로 닫기"
         } else {
-            let status = Self.extractHTTPStatus(from: error)
+            let httpError = Self.extractHTTPError(from: error)
             title = error.localizedDescription
             hint = Self.customHint(for: error)
-                ?? status.flatMap { APIErrorParser.hint(status: $0) }
-                ?? "Esc to dismiss · or check Console.app"
+                ?? httpError.flatMap { APIErrorParser.hint(status: $0.status, body: $0.body) }
+                ?? "Esc로 닫기 · Console.app 확인"
         }
 
         hud.model.phase = .error(message: title, hint: hint)

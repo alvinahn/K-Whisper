@@ -15,11 +15,11 @@ final class AudioRecorder: NSObject, ObservableObject, AVAudioRecorderDelegate {
         case fileMissing
         var errorDescription: String? {
             switch self {
-            case .unauthorized:    return "Microphone permission was denied for K-Whisper. Open Settings → Privacy → Microphone and enable K-Whisper."
-            case .engineFailed(let m): return "Audio engine failed: \(m)"
-            case .noInput:         return "No audio input device available."
-            case .empty:           return "No audio captured."
-            case .fileMissing:     return "Recording finished but the audio file is missing."
+            case .unauthorized:    return "K-Whisper 마이크 권한이 거부되었습니다. 시스템 설정 → 개인정보 보호 및 보안 → 마이크에서 K-Whisper를 허용하세요."
+            case .engineFailed(let m): return "오디오 엔진 오류: \(m)"
+            case .noInput:         return "사용 가능한 오디오 입력 장치가 없습니다."
+            case .empty:           return "녹음된 오디오가 없습니다."
+            case .fileMissing:     return "녹음은 끝났지만 오디오 파일을 찾을 수 없습니다."
             }
         }
     }

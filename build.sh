@@ -38,9 +38,26 @@ cp "$EXE" "$BIN_DIR/$APP"
 cp "$ROOT/Resources/Info.plist" "$APP_DIR/Contents/Info.plist"
 cp "$ROOT/build/AppIcon.icns" "$RES_DIR/AppIcon.icns"
 
-# Ad-hoc sign so the OS lets you launch it (without an Apple Developer ID).
-echo "▶︎ Ad-hoc codesigning…"
-codesign --force --deep --sign - --entitlements "$ROOT/Resources/KWhisper.entitlements" "$APP_DIR"
+# A stable signing identity keeps macOS Accessibility grants across rebuilds.
+# Without one, ad-hoc signing changes the app's code identity every build and TCC
+# quite reasonably asks the user to grant Accessibility again.
+SIGN_IDENTITY="${KWHISPER_CODESIGN_IDENTITY:-}"
+if [[ -z "$SIGN_IDENTITY" ]]; then
+    SIGN_IDENTITY="$(
+        security find-identity -v -p codesigning 2>/dev/null \
+            | awk -F '"' '/Developer ID Application|Apple Development|K-Whisper Local/ { print $2; exit }'
+    )"
+fi
+
+if [[ -n "$SIGN_IDENTITY" ]]; then
+    echo "▶︎ Codesigning with identity: $SIGN_IDENTITY"
+    codesign --force --deep --sign "$SIGN_IDENTITY" --entitlements "$ROOT/Resources/KWhisper.entitlements" "$APP_DIR"
+else
+    echo "▶︎ Ad-hoc codesigning…"
+    echo "   No stable code-signing identity found; Accessibility will need re-granting after rebuilds."
+    echo "   Set KWHISPER_CODESIGN_IDENTITY to a local Code Signing certificate to keep TCC grants stable."
+    codesign --force --deep --sign - --entitlements "$ROOT/Resources/KWhisper.entitlements" "$APP_DIR"
+fi
 
 # Tell Finder/Dock to refresh icon caches for this bundle.
 touch "$APP_DIR"

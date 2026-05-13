@@ -1,14 +1,13 @@
 import Foundation
 
-/// Groq-hosted Whisper Large-v3 via their OpenAI-compatible audio transcription endpoint.
+/// Groq-hosted Whisper Large-v3-Turbo via their OpenAI-compatible audio transcription endpoint.
 ///
 /// - Endpoint: `https://api.groq.com/openai/v1/audio/transcriptions`
-/// - Default model: `whisper-large-v3` (189× realtime, $0.111/hr) — full model. Korean
-///   punctuation/intonation (`?` after ~거든/~지/~잖아) + rare-word recognition is meaningfully
-///   better than the distilled turbo variant. Free-tier on Groq covers it.
-/// - Faster alternative: `whisper-large-v3-turbo` (216× realtime, $0.04/hr) — distilled,
-///   weaker on Korean punctuation. Was the default; switched after observing turbo strip
-///   confirmation `?` and normalize colloquial spellings like 같애 → 같아.
+/// - Default model: `whisper-large-v3-turbo` (216× realtime, $0.04/hr) — distilled.
+///   Speed-optimized for personal dictation. Korean punctuation/dialect preservation is
+///   handled downstream (deterministic punctuation restorer + verbatim-default mode).
+/// - Alternative: `whisper-large-v3` (189× realtime, $0.111/hr) — full model, marginally
+///   better Korean `?` detection but slower.
 ///
 /// Same wire format as OpenAI's Whisper, so the multipart shape mirrors `WhisperClient`.
 struct GroqWhisperSTT: STTProvider {
@@ -18,9 +17,9 @@ struct GroqWhisperSTT: STTProvider {
         case decode(String)
         var errorDescription: String? {
             switch self {
-            case .missingKey: return "Groq API key is missing. Add it in Settings → API Keys."
-            case .http(let c, let b): return "Groq STT — " + APIErrorParser.format(status: c, body: b)
-            case .decode(let m): return "Groq STT decode failed: \(m)"
+            case .missingKey: return "Groq API 키가 없습니다. 설정 → API 키에서 추가하세요."
+            case .http(let c, let b): return "Groq 음성 인식 — " + APIErrorParser.format(status: c, body: b)
+            case .decode(let m): return "Groq 음성 인식 응답 해석 실패: \(m)"
             }
         }
     }
@@ -32,7 +31,7 @@ struct GroqWhisperSTT: STTProvider {
 
     init(
         apiKey: String,
-        model: String = "whisper-large-v3",
+        model: String = "whisper-large-v3-turbo",
         session: URLSession = Networking.shared
     ) {
         self.apiKey = apiKey
@@ -74,7 +73,7 @@ struct GroqWhisperSTT: STTProvider {
         appendFile(name: "file", filename: "audio.wav", mime: "audio/wav", data: wav)
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
 
-        let (data, response) = try await session.upload(for: req, from: body)
+        let (data, response) = try await RateLimitRetry.upload(for: req, from: body, session: session)
         guard let http = response as? HTTPURLResponse else {
             throw GroqSTTError.http(-1, "no response")
         }

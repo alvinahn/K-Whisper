@@ -8,9 +8,9 @@ struct WhisperClient: STTProvider {
         case decode(String)
         var errorDescription: String? {
             switch self {
-            case .missingKey: return "OpenAI API key is missing. Add it in Settings → API Keys."
+            case .missingKey: return "OpenAI API 키가 없습니다. 설정 → API 키에서 추가하세요."
             case .http(let code, let body): return "Whisper — " + APIErrorParser.format(status: code, body: body)
-            case .decode(let m): return "Whisper response decode failed: \(m)"
+            case .decode(let m): return "Whisper 응답 해석 실패: \(m)"
             }
         }
     }

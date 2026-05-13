@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-Project-specific instructions for Claude Code working on this repo.
+Project-specific instructions for Codex working on this repo.
 
 ## What this project is
 

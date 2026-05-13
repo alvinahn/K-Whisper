@@ -4,7 +4,7 @@ import Foundation
 /// stripped from the STT-corrected text. Llama 70B occasionally drops Korean
 /// confirmation `?` and terminal `.` even when the system prompt explicitly orders
 /// "preserve all punctuation as transcribed" — this util is the deterministic safety
-/// net for the conservative `default-cleanup` mode.
+/// net for the conservative `cleanup` mode.
 ///
 /// Behavior contract: **strictly additive**. Never modifies, replaces, or removes a
 /// punctuation mark that already exists in `output`. If alignment fails (LLM rewrote

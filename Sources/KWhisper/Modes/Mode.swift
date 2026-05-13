@@ -13,7 +13,7 @@ enum LLMProviderKind: String, CaseIterable, Codable, Identifiable {
         case .claude: return "Claude (Anthropic)"
         case .openai: return "OpenAI"
         case .gemini: return "Gemini (Google)"
-        case .none:   return "None (raw transcript)"
+        case .none:   return "없음 (원문 그대로)"
         }
     }
 }
