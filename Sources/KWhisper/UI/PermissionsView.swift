@@ -43,7 +43,7 @@ struct PermissionsView: View {
                 row(
                     title: "입력 모니터링 (Fn 키 전용)",
                     granted: nil,
-                    why: "일반 탭에서 누르고 말하기 키를 오른쪽 ⌘로 바꾸면 이 권한은 필요 없습니다.",
+                    why: "일반 탭에서 누르고 말하기 키를 오른쪽 ⌥ Option으로 바꾸면 이 권한은 필요 없습니다.",
                     action: nil,
                     actionLabel: nil,
                     fallback: { perms.openInputMonitoringPane() }
@@ -56,12 +56,12 @@ struct PermissionsView: View {
                         diag.toggleMicTest()
                     }
                     if diag.micTestActive {
-                        ProgressView(value: Double(diag.micTestLevel))
-                            .frame(width: 140)
-                        Text("피크 \(String(format: "%.2f", diag.micTestPeak))")
-                            .font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary)
-                        Text(String(format: "%.1fs", diag.micTestSeconds))
-                            .font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary)
+                        MicLevelMeter(
+                            level: diag.micTestLevel,
+                            peak: diag.micTestPeak,
+                            seconds: diag.micTestSeconds
+                        )
+                        .frame(maxWidth: 280)
                     }
                     Spacer()
                 }

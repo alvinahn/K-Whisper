@@ -303,7 +303,7 @@ final class DictationCoordinator: ObservableObject {
         hud.model.language = transcript.language
 
         // Step 1.5: deterministic glossary-alias substitution. STT mishearings of
-        // known proper nouns (e.g. "션" → "셔니") get rewritten here, before the LLM
+        // known proper nouns/terms (e.g. "결재 API" → "결제 API") get rewritten here, before the LLM
         // ever sees them.
         let correctedText = glossary.applySubstitutions(to: transcript.text)
         if correctedText != transcript.text {

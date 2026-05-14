@@ -4,6 +4,7 @@ struct GlossaryView: View {
     @ObservedObject private var store = GlossaryStore.shared
     @State private var newCanonical: String = ""
     @State private var newAliases: String = ""
+    @State private var editingCanonical: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -17,22 +18,28 @@ struct GlossaryView: View {
                         Text("올바른 표기")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(.secondary)
-                        TextField("예: BoundX, 셔니, Navio", text: $newCanonical)
+                        TextField("예: 결제 API, 고객센터, 프로젝트 알파", text: $newCanonical)
                             .textFieldStyle(.roundedBorder)
-                            .onSubmit { add() }
+                            .onSubmit { saveEntry() }
                     }
                     VStack(alignment: .leading, spacing: 3) {
                         Text("잘못 인식한 표현 (선택)")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(.secondary)
-                        TextField("예: 샤니, 션이", text: $newAliases)
+                        TextField("예: 결재 API, 고객 센타", text: $newAliases)
                             .textFieldStyle(.roundedBorder)
-                            .onSubmit { add() }
+                            .onSubmit { saveEntry() }
                     }
-                    VStack {
+                    VStack(alignment: .trailing, spacing: 3) {
                         Spacer().frame(height: 13)  // align with text field
-                        Button("추가", action: add)
-                            .disabled(canonicalTrimmed.isEmpty)
+                        HStack(spacing: 6) {
+                            if editingCanonical != nil {
+                                Button("취소", action: cancelEditing)
+                            }
+                            Button(editingCanonical == nil ? "추가" : "저장", action: saveEntry)
+                                .disabled(canonicalTrimmed.isEmpty)
+                        }
+                        .frame(minWidth: editingCanonical == nil ? 52 : 108, alignment: .trailing)
                     }
                 }
             }
@@ -66,6 +73,14 @@ struct GlossaryView: View {
                 }
             }
             Spacer(minLength: 6)
+            Button {
+                startEditing(entry)
+            } label: {
+                Image(systemName: "pencil")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("수정")
             Button(role: .destructive) {
                 remove(canonical: entry.canonical)
             } label: {
@@ -74,13 +89,17 @@ struct GlossaryView: View {
             }
             .buttonStyle(.plain)
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            startEditing(entry)
+        }
     }
 
     private var canonicalTrimmed: String {
         newCanonical.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private func add() {
+    private func saveEntry() {
         let canonical = canonicalTrimmed
         guard !canonical.isEmpty else { return }
 
@@ -94,18 +113,43 @@ struct GlossaryView: View {
             ? canonical
             : "\(canonical)|\(aliases.joined(separator: ","))"
 
-        if let idx = store.terms.firstIndex(where: { canonicalOf($0) == canonical }) {
+        if let editingCanonical {
+            var updated = store.terms
+            if editingCanonical != canonical {
+                updated.removeAll { canonicalOf($0) == canonical }
+            }
+            if let idx = updated.firstIndex(where: { canonicalOf($0) == editingCanonical }) {
+                updated[idx] = line
+            } else {
+                updated.append(line)
+            }
+            store.terms = updated
+        } else if let idx = store.terms.firstIndex(where: { canonicalOf($0) == canonical }) {
             store.terms[idx] = line
         } else {
             store.terms.append(line)
         }
 
-        newCanonical = ""
-        newAliases = ""
+        cancelEditing()
     }
 
     private func remove(canonical: String) {
         store.terms.removeAll { canonicalOf($0) == canonical }
+        if editingCanonical == canonical {
+            cancelEditing()
+        }
+    }
+
+    private func startEditing(_ entry: GlossaryStore.ParsedEntry) {
+        editingCanonical = entry.canonical
+        newCanonical = entry.canonical
+        newAliases = entry.aliases.joined(separator: ", ")
+    }
+
+    private func cancelEditing() {
+        editingCanonical = nil
+        newCanonical = ""
+        newAliases = ""
     }
 
     private func canonicalOf(_ rawLine: String) -> String {

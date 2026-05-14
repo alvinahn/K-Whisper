@@ -149,13 +149,19 @@ enum AppIconFactory {
             let accent = NSGradient(colors: [voxaIndigo.withAlphaComponent(0.0), voxaIndigo.withAlphaComponent(0.45), voxaIndigo.withAlphaComponent(0.0)])!
             accent.draw(in: NSRect(x: 0, y: rect.height - 4, width: rect.width, height: 4), angle: 0)
 
-            // Drop-shadow for the title so it pops against the gradient.
+            let lowerShade = NSGradient(colors: [
+                NSColor.black.withAlphaComponent(0.58),
+                NSColor.black.withAlphaComponent(0.0)
+            ])!
+            lowerShade.draw(in: NSRect(x: 0, y: 0, width: rect.width, height: 180), angle: 90)
+
+            // Drop-shadow for the header copy so it pops against the gradient.
             let titleShadow = NSShadow()
             titleShadow.shadowColor = NSColor.black.withAlphaComponent(0.55)
             titleShadow.shadowBlurRadius = 6
             titleShadow.shadowOffset = NSSize(width: 0, height: -1)
 
-            // Title — bigger, bolder, with shadow
+            // Title - bigger, bolder, with shadow.
             let titleStyle = NSMutableParagraphStyle()
             titleStyle.alignment = .center
             let titleAttrs: [NSAttributedString.Key: Any] = [
@@ -164,30 +170,42 @@ enum AppIconFactory {
                 .paragraphStyle: titleStyle,
                 .shadow: titleShadow
             ]
-            let title = "Install K-Whisper" as NSString
+            let title = "K-Whisper 설치" as NSString
             let titleSize = title.size(withAttributes: titleAttrs)
             title.draw(
-                at: NSPoint(x: (rect.width - titleSize.width) / 2, y: rect.height - 60),
+                at: NSPoint(x: (rect.width - titleSize.width) / 2, y: rect.height - 54),
                 withAttributes: titleAttrs
             )
 
-            // Subtitle — bigger, more opaque
+            // Install instruction.
             let subAttrs: [NSAttributedString.Key: Any] = [
                 .font: NSFont.systemFont(ofSize: 14, weight: .medium),
                 .foregroundColor: NSColor.white.withAlphaComponent(0.92),
                 .shadow: titleShadow
             ]
-            let subtitle = "Drag K-Whisper onto the Applications folder" as NSString
+            let subtitle = "K-Whisper를 응용 프로그램 폴더로 드래그하세요" as NSString
             let subSize = subtitle.size(withAttributes: subAttrs)
             subtitle.draw(
-                at: NSPoint(x: (rect.width - subSize.width) / 2, y: rect.height - 92),
+                at: NSPoint(x: (rect.width - subSize.width) / 2, y: rect.height - 84),
                 withAttributes: subAttrs
             )
 
+            let descriptionAttrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 12, weight: .regular),
+                .foregroundColor: NSColor.white.withAlphaComponent(0.76),
+                .shadow: titleShadow
+            ]
+            let description = "한국어와 영어로 말하면 텍스트로 바꿔 원하는 앱에 바로 붙여넣습니다." as NSString
+            let descriptionSize = description.size(withAttributes: descriptionAttrs)
+            description.draw(
+                at: NSPoint(x: (rect.width - descriptionSize.width) / 2, y: rect.height - 110),
+                withAttributes: descriptionAttrs
+            )
+
             // Arrow between icon positions — brighter for visibility.
-            let arrowY: CGFloat = 200
-            let startX: CGFloat = 200
-            let endX: CGFloat   = 340
+            let arrowY: CGFloat = 188
+            let startX: CGFloat = 194
+            let endX: CGFloat   = 332
             let stroke = NSColor.white.withAlphaComponent(0.85)
             stroke.setStroke()
 
@@ -207,32 +225,23 @@ enum AppIconFactory {
             stroke.setFill()
             head.fill()
 
-            // Draw the icon labels in BRIGHT WHITE in the background. Finder's own
-            // overlay labels render as a translucent gray on dark DMG backgrounds, so
-            // we paint solid white text exactly at the label positions and let Finder's
-            // dim overlay sit on top — composite reads as proper white labels.
             let labelStyle = NSMutableParagraphStyle()
             labelStyle.alignment = .center
             let labelAttrs: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 12, weight: .semibold),
-                .foregroundColor: NSColor.white,
+                .font: NSFont.systemFont(ofSize: 13, weight: .medium),
+                .foregroundColor: NSColor.white.withAlphaComponent(0.96),
                 .paragraphStyle: labelStyle,
                 .shadow: titleShadow
             ]
-            // Icon center is at AppleScript {x, 200} = PNG y = 380 - 200 = 180.
-            // Icon is 96 px tall, so its bottom edge is at PNG y = 132. Label sits
-            // ~12 px below the icon; baseline around y = 110.
-            let labelY: CGFloat = 110
+            let labelY: CGFloat = 96
             let leftLabel = "K-Whisper" as NSString
-            let leftSize = leftLabel.size(withAttributes: labelAttrs)
             leftLabel.draw(
-                at: NSPoint(x: 140 - leftSize.width / 2, y: labelY),
+                in: NSRect(x: 140 - 70, y: labelY, width: 140, height: 18),
                 withAttributes: labelAttrs
             )
             let rightLabel = "Applications" as NSString
-            let rightSize = rightLabel.size(withAttributes: labelAttrs)
             rightLabel.draw(
-                at: NSPoint(x: 400 - rightSize.width / 2, y: labelY),
+                in: NSRect(x: 400 - 70, y: labelY, width: 140, height: 18),
                 withAttributes: labelAttrs
             )
 

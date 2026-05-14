@@ -71,7 +71,7 @@ enum DefaultModes {
 
             Korean fixes allowed:
             - Obvious STT word errors, homophones, or compound-verb splits (미치고 버렸네 -> 미쳐버렸네).
-            - Particles only when grammar is broken and the correction is unambiguous, including 받침 agreement (셔니이 -> 셔니가, 알빈가 -> 알빈이).
+            - Particles only when grammar is broken and the correction is unambiguous, including 받침 agreement (회의이 -> 회의가, 일정가 -> 일정이).
 
             English: remove clear fillers only; fix punctuation/capitalization; preserve wording and register.
 

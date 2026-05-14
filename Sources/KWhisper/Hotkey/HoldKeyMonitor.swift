@@ -4,8 +4,8 @@ import AppKit
 /// Specific physical key used for push-to-talk. Detected via NSEvent flag-change monitoring,
 /// which does NOT require Input Monitoring permission.
 enum HoldKey: String, CaseIterable, Codable, Identifiable {
-    case rightCommand
     case rightOption
+    case rightCommand
     case rightShift
     case rightControl
     case fn
@@ -14,8 +14,8 @@ enum HoldKey: String, CaseIterable, Codable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .rightCommand: return "Right ⌘ Command (recommended)"
-        case .rightOption:  return "Right ⌥ Option"
+        case .rightOption:  return "Right ⌥ Option (recommended)"
+        case .rightCommand: return "Right ⌘ Command"
         case .rightShift:   return "Right ⇧ Shift"
         case .rightControl: return "Right ⌃ Control"
         case .fn:           return "Fn / Globe"
