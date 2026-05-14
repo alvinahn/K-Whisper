@@ -55,6 +55,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 // MARK: - Sidebar-driven settings
 
 private enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
+    case onboarding
     case general
     case apiKeys
     case modes
@@ -66,6 +67,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
 
     var title: String {
         switch self {
+        case .onboarding:  return "시작하기"
         case .general:     return "일반"
         case .apiKeys:     return "API 키"
         case .modes:       return "모드"
@@ -77,6 +79,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
 
     var systemImage: String {
         switch self {
+        case .onboarding:  return "checklist"
         case .general:     return "gearshape.fill"
         case .apiKeys:     return "key.fill"
         case .modes:       return "sparkles"
@@ -90,6 +93,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
     /// than the stock Color.yellow / Color.blue (which read as neon).
     var iconTint: Color {
         switch self {
+        case .onboarding:  return Color(red: 0.22, green: 0.58, blue: 0.86)
         case .general:     return Color(red: 0.50, green: 0.50, blue: 0.55)
         case .apiKeys:     return Color(red: 0.86, green: 0.66, blue: 0.18)
         case .modes:       return Color(red: 0.20, green: 0.50, blue: 0.92)
@@ -101,7 +105,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable, Hashable {
 }
 
 struct SettingsRootView: View {
-    @State private var selection: SettingsTab? = .general
+    @State private var selection: SettingsTab? = .onboarding
 
     var body: some View {
         NavigationSplitView {
@@ -132,6 +136,7 @@ struct SettingsRootView: View {
         } detail: {
             detailView
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .id(selection ?? .onboarding)
                 .navigationTitle(selection?.title ?? "설정")
                 .navigationSubtitle("")
                 .toolbar {
@@ -144,7 +149,8 @@ struct SettingsRootView: View {
 
     @ViewBuilder
     private var detailView: some View {
-        switch selection ?? .general {
+        switch selection ?? .onboarding {
+        case .onboarding:  OnboardingView()
         case .general:     GeneralSettingsView()
         case .apiKeys:     APIKeysSettingsView()
         case .modes:       ModesSettingsView()

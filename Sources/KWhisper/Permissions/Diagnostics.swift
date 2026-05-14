@@ -14,6 +14,7 @@ final class Diagnostics: ObservableObject {
     @Published var micTestLevel: Float = 0
     @Published var micTestPeak: Float = 0
     @Published var micTestSeconds: TimeInterval = 0
+    @Published var pasteTestSucceeded: Bool = false
 
     let recorder = AudioRecorder()
     private var levelSub: AnyCancellable?
@@ -76,6 +77,7 @@ final class Diagnostics: ObservableObject {
     func testPaste() {
         lastMessage = "텍스트 입력 칸에 포커스를 옮기세요 - 3초 뒤 붙여넣습니다…"
         lastSuccess = false
+        pasteTestSucceeded = false
         let countdown: [String] = ["3초 뒤 붙여넣기…", "2초 뒤 붙여넣기…", "1초 뒤 붙여넣기…"]
         for (i, msg) in countdown.enumerated() {
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(i)) { [weak self] in
@@ -88,9 +90,11 @@ final class Diagnostics: ObservableObject {
                 try TextInjector.deliver("kwhisper-paste-test ✓")
                 self.lastMessage = "✅ 붙여넣기 전송 완료 - 입력 칸에 'kwhisper-paste-test ✓'가 나타났나요?"
                 self.lastSuccess = true
+                self.pasteTestSucceeded = true
             } catch {
                 self.lastMessage = "❌ \(error.localizedDescription) - 위 접근성 섹션에서 '다시 허용'을 누르세요."
                 self.lastSuccess = false
+                self.pasteTestSucceeded = false
             }
         }
     }

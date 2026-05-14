@@ -50,7 +50,7 @@ struct GeneralSettingsView: View {
                             Text(k.displayName).tag(k)
                         }
                     }
-                    Text("오른쪽 ⌘는 입력 모니터링 권한이 필요 없습니다. Fn은 필요합니다.")
+                    Text("오른쪽 ⌥ Option을 추천합니다. Fn / Globe는 입력 모니터링 권한이 필요합니다.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 HStack {
