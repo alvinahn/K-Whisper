@@ -19,6 +19,7 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="K-Whisper"
 APP_PATH="$ROOT/build/$APP_NAME.app"
 EXECUTABLE="$APP_PATH/Contents/MacOS/KWhisper"
+APP_ALIAS_NAME="Applications"
 
 if [[ ! -d "$APP_PATH" ]]; then
     echo "❌ $APP_NAME.app not found at $APP_PATH"
@@ -32,6 +33,15 @@ FINAL_DMG="$ROOT/build/$DMG_NAME"
 RW_DMG="$ROOT/build/$APP_NAME-rw.dmg"
 STAGE="$ROOT/build/dmg-stage"
 VOLUME_NAME="$APP_NAME"
+
+# Finder addresses mounted volumes by display name, so a previously opened
+# installer with the same name can make AppleScript configure the wrong disk.
+find /Volumes -maxdepth 1 \( -name "$VOLUME_NAME" -o -name "$VOLUME_NAME [0-9]*" \) -type d -print 2>/dev/null \
+    | sort -r \
+    | while IFS= read -r mountPath; do
+        echo "▶︎ Detaching existing installer volume at $mountPath"
+        hdiutil detach "$mountPath" -quiet || hdiutil detach "$mountPath" -force -quiet || true
+    done
 
 # 1. Render background PNG using the app binary
 BG_DIR="$STAGE/.background"
@@ -73,7 +83,7 @@ osascript <<MAKE_ALIAS
 tell application "Finder"
     set appsFolder to (path to applications folder from local domain) as alias
     tell disk "$VOLUME_NAME"
-        make new alias file at it to appsFolder with properties {name:"Applications"}
+        make new alias file at it to appsFolder with properties {name:"$APP_ALIAS_NAME"}
     end tell
 end tell
 MAKE_ALIAS
@@ -84,7 +94,7 @@ sleep 0.5
 # the alias often shows up as an empty rounded box because Finder doesn't always
 # resolve and cache the target's icon resource on first render.
 echo "▶︎ Copying system Applications icon"
-"$EXECUTABLE" --copy-icon "/Applications" "$MOUNT_POINT/Applications" || true
+"$EXECUTABLE" --copy-icon "/Applications" "$MOUNT_POINT/$APP_ALIAS_NAME" || true
 sleep 0.3
 
 # 6. AppleScript: window size, icon view, bg image, icon positions
@@ -103,13 +113,14 @@ on run
             set viewOpts to icon view options of container window
             set arrangement of viewOpts to not arranged
             set icon size of viewOpts to 96
-            set text size of viewOpts to 13
+            set text size of viewOpts to 10
+            set color of viewOpts to {0, 0, 0}
 
             set bgFile to POSIX file "$MOUNT_POINT/.background/background.png" as alias
             set background picture of viewOpts to bgFile
 
             set position of item "$APP_NAME.app" of container window to {140, 200}
-            set position of item "Applications" of container window to {400, 200}
+            set position of item "$APP_ALIAS_NAME" of container window to {400, 200}
 
             delay 0.4
             update without registering applications
