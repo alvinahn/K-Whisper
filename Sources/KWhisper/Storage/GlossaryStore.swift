@@ -5,8 +5,8 @@ import Combine
 ///
 /// Storage shape stays as `[String]` for zero-migration backward compatibility.
 /// Each line is parsed at read time using `|` syntax:
-///   "셔니"             → canonical "셔니", no aliases
-///   "셔니|션,쇼니"      → canonical "셔니", aliases ["션", "쇼니"]
+///   "결제 API"              → canonical "결제 API", no aliases
+///   "결제 API|결재 API,결제 에이피아이" → canonical "결제 API", aliases ["결재 API", "결제 에이피아이"]
 /// Aliases are alternate STT mishearings the user wants rewritten to the canonical
 /// form deterministically (see `applySubstitutions(to:)`).
 @MainActor
@@ -94,7 +94,7 @@ final class GlossaryStore: ObservableObject {
 
     /// Deterministically rewrite any glossary aliases in `text` back to their canonical
     /// form, using Korean-aware word boundaries so that e.g. "옵션" is NOT corrupted to
-    /// "옵셔니" just because "션" is an alias for "셔니".
+    /// "고객센터장" just because "고객 센터" is an alias for "고객센터".
     ///
     /// Boundary rules:
     ///  - Pre-context: alias must NOT be preceded by a Hangul char (start, space,
