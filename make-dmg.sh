@@ -11,6 +11,7 @@
 #      the system folder's icon for symlinks. A real alias does.)
 #  5. AppleScript to set window/bg/icon positions
 #  6. Detach and convert to compressed read-only DMG (UDZO)
+#  7. Copy the K-Whisper app icon onto the final .dmg file
 #
 # Output: build/K-Whisper-{version}.dmg
 set -euo pipefail
@@ -145,6 +146,9 @@ hdiutil detach "$DEV" -quiet || hdiutil detach "$DEV" -force >/dev/null
 # 8. Compress
 echo "▶︎ Compressing → $DMG_NAME"
 hdiutil convert "$RW_DMG" -format UDZO -imagekey zlib-level=9 -o "$FINAL_DMG" >/dev/null
+
+echo "▶︎ Copying K-Whisper icon onto DMG file"
+"$EXECUTABLE" --copy-icon "$APP_PATH" "$FINAL_DMG" || true
 
 codesign --force --sign - "$FINAL_DMG" 2>/dev/null || true
 
