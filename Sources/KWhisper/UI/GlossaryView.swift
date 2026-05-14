@@ -30,16 +30,16 @@ struct GlossaryView: View {
                             .textFieldStyle(.roundedBorder)
                             .onSubmit { saveEntry() }
                     }
-                    VStack(alignment: .trailing, spacing: 6) {
+                    VStack(alignment: .trailing, spacing: 3) {
                         Spacer().frame(height: 13)  // align with text field
-                        Button(editingCanonical == nil ? "추가" : "저장", action: saveEntry)
-                            .disabled(canonicalTrimmed.isEmpty)
-                        if editingCanonical != nil {
-                            Button("취소", action: cancelEditing)
-                                .buttonStyle(.plain)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                        HStack(spacing: 6) {
+                            if editingCanonical != nil {
+                                Button("취소", action: cancelEditing)
+                            }
+                            Button(editingCanonical == nil ? "추가" : "저장", action: saveEntry)
+                                .disabled(canonicalTrimmed.isEmpty)
                         }
+                        .frame(minWidth: editingCanonical == nil ? 52 : 108, alignment: .trailing)
                     }
                 }
             }
