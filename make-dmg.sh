@@ -11,7 +11,7 @@
 #      the system folder's icon for symlinks. A real alias does.)
 #  5. AppleScript to set window/bg/icon positions
 #  6. Detach and convert to compressed read-only DMG (UDZO)
-#  7. Copy the K-Whisper app icon onto the final .dmg file
+#  7. Copy the K-Whisper app icon onto the mounted volume and final .dmg file
 #
 # Output: build/K-Whisper-{version}.dmg
 set -euo pipefail
@@ -96,6 +96,15 @@ sleep 0.5
 # resolve and cache the target's icon resource on first render.
 echo "▶︎ Copying system Applications icon"
 "$EXECUTABLE" --copy-icon "/Applications" "$MOUNT_POINT/$APP_ALIAS_NAME" || true
+sleep 0.3
+
+# Give the mounted installer volume the K-Whisper icon too. This survives inside
+# the DMG image and is more reliable than only setting Finder metadata on the
+# final .dmg file.
+echo "▶︎ Setting K-Whisper icon on installer volume"
+cp "$ROOT/build/AppIcon.icns" "$MOUNT_POINT/.VolumeIcon.icns"
+/usr/bin/SetFile -a C "$MOUNT_POINT" || true
+/usr/bin/SetFile -a V "$MOUNT_POINT/.VolumeIcon.icns" || chflags hidden "$MOUNT_POINT/.VolumeIcon.icns"
 sleep 0.3
 
 # 6. AppleScript: window size, icon view, bg image, icon positions
